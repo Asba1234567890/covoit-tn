@@ -1,0 +1,439 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Currency {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  symbol    String
+  decimals  Int      @default(3)
+  countries Country[]
+}
+
+model Country {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  name          String
+  currencyId    String
+  currency      Currency @relation(fields: [currencyId], references: [id])
+  defaultLocale String
+  supportedLangs String[]
+  emergencyNumbers Json
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  cities        City[]
+  settings      PlatformSetting[]
+}
+
+model City {
+  id        String   @id @default(uuid())
+  countryId String
+  country   Country  @relation(fields: [countryId], references: [id])
+  name      String
+  nameAr    String?
+  lat       Float
+  lng       Float
+  isActive  Boolean  @default(true)
+
+  @@index([countryId])
+}
+
+model PlatformSetting {
+  id        String   @id @default(uuid())
+  countryId String?
+  country   Country? @relation(fields: [countryId], references: [id])
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([countryId, key])
+}
+
+model User {
+  id            String    @id @default(uuid())
+  phone         String    @unique
+  phoneVerified Boolean   @default(false)
+  passwordHash  String?
+  email         String?   @unique
+  firstName     String
+  lastInitial   String?
+  dateOfBirth   DateTime?
+  gender        String?
+  bio           String?
+  profilePhotoUrl String?
+  languages     String[]  @default([])
+  memberSince   DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  suspendedAt   DateTime?
+  bannedAt      DateTime?
+  verificationLevel Int   @default(1)
+  verifications Verification[]
+  driverProfile DriverProfile?
+  vehicles      Vehicle[]
+  ridesAsDriver Ride[]        @relation("DriverRides")
+  recurringRidesAsDriver RecurringRide[]
+  bookings      Booking[]
+  reviewsGiven  Review[]      @relation("ReviewAuthor")
+  reviewsReceived Review[]    @relation("ReviewSubject")
+  favorites     Favorite[]
+  reports       Report[]      @relation("ReportingUser")
+  reportedBy    Report[]      @relation("ReportedUser")
+  emergencyContacts EmergencyContact[]
+  notifications Notification[]
+  conversations ConversationParticipant[]
+  messages      Message[]
+  auditLogs     AuditLog[]
+  commutes      Commute[]
+  tripShares    TripShare[]
+  sessions      Session[]
+
+  @@index([phone])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  deviceInfo String?
+
+  @@index([userId])
+}
+
+model Verification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  status    String   @default("PENDING")
+  documentUrl String
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model DriverProfile {
+  id            String  @id @default(uuid())
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id])
+  smokingPolicy String?
+  musicPolicy   String?
+  luggagePolicy String?
+  petsPolicy    String?
+  conversationPreference String?
+  rating        Float   @default(0)
+  completedRidesCount Int @default(0)
+  cancellationRate    Float @default(0)
+}
+
+model Vehicle {
+  id          String  @id @default(uuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id])
+  make        String
+  model       String
+  color       String
+  licensePlate String
+  seatsTotal  Int
+  createdAt   DateTime @default(now())
+  rides       Ride[]
+
+  @@index([userId])
+}
+
+model RecurringRide {
+  id          String   @id @default(uuid())
+  driverId    String
+  driver      User     @relation(fields: [driverId], references: [id])
+  vehicleId   String
+  originCityId      String
+  destinationCityId String
+  originLabel       String
+  originLat         Float
+  originLng         Float
+  destinationLabel  String
+  destinationLat    Float
+  destinationLng    Float
+  daysOfWeek  Int[]
+  departureTime String
+  seatsPerInstance Int
+  pricePerSeat     Decimal @db.Decimal(10, 3)
+  luggageAllowed   Boolean @default(true)
+  smokingAllowed   Boolean @default(false)
+  petsAllowed      Boolean @default(false)
+  description      String?
+  bookingMode      String  @default("APPROVAL")
+  isActive         Boolean @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  instances   Ride[]
+
+  @@index([driverId])
+}
+
+model Ride {
+  id          String   @id @default(uuid())
+  recurringRideId String?
+  recurringRide   RecurringRide? @relation(fields: [recurringRideId], references: [id])
+  driverId    String
+  driver      User     @relation("DriverRides", fields: [driverId], references: [id])
+  vehicleId   String
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+  originCityId      String
+  destinationCityId String
+  originLabel       String
+  originLat         Float
+  originLng         Float
+  destinationLabel  String
+  destinationLat    Float
+  destinationLng    Float
+  routeGeometry     Json?
+  departureAt DateTime
+  estimatedArrivalAt DateTime?
+  seatsTotal    Int
+  seatsAvailable Int
+  pricePerSeat  Decimal @db.Decimal(10, 3)
+  luggageAllowed Boolean @default(true)
+  smokingAllowed Boolean @default(false)
+  petsAllowed    Boolean @default(false)
+  description    String?
+  bookingMode    String  @default("APPROVAL")
+  status      String   @default("SCHEDULED")
+  startedAt   DateTime?
+  completedAt DateTime?
+  cancelledAt DateTime?
+  waypoints   Waypoint[]
+  bookings    Booking[]
+  conversations Conversation[]
+  tripShares  TripShare[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([driverId])
+  @@index([departureAt])
+  @@index([originCityId, destinationCityId])
+}
+
+model Waypoint {
+  id      String @id @default(uuid())
+  rideId  String
+  ride    Ride   @relation(fields: [rideId], references: [id])
+  label   String
+  lat     Float
+  lng     Float
+  sequence Int
+
+  @@index([rideId])
+}
+
+model Commute {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  homeLabel   String
+  homeLat     Float
+  homeLng     Float
+  workLabel   String
+  workLat     Float
+  workLng     Float
+  departureTime String
+  returnTime    String?
+  daysOfWeek    Int[]
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Booking {
+  id           String   @id @default(uuid())
+  rideId       String
+  ride         Ride     @relation(fields: [rideId], references: [id])
+  passengerId  String
+  passenger    User     @relation(fields: [passengerId], references: [id])
+  seatsBooked  Int
+  status       String   @default("PENDING")
+  respondedAt  DateTime?
+  cancelledAt  DateTime?
+  cancellationReason String?
+  payment      Payment?
+  reviews      Review[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([rideId])
+  @@index([passengerId])
+}
+
+model Payment {
+  id         String  @id @default(uuid())
+  bookingId  String  @unique
+  booking    Booking @relation(fields: [bookingId], references: [id])
+  provider   String
+  amountGross Decimal @db.Decimal(10, 3)
+  platformFee Decimal @db.Decimal(10, 3)
+  amountNet   Decimal @db.Decimal(10, 3)
+  status      String  @default("UNPAID")
+  paidAt      DateTime?
+  refundedAt  DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  rideId    String
+  ride      Ride     @relation(fields: [rideId], references: [id])
+  createdAt DateTime @default(now())
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([rideId])
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+  body           String
+  isQuickReply   Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  bookingId   String
+  booking     Booking  @relation(fields: [bookingId], references: [id])
+  authorId    String
+  author      User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  subjectId   String
+  subject     User     @relation("ReviewSubject", fields: [subjectId], references: [id])
+  stars       Int
+  categories  Json?
+  comment     String?
+  moderationStatus String @default("PENDING")
+  createdAt   DateTime @default(now())
+
+  @@unique([bookingId, authorId])
+  @@index([subjectId])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  refId     String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Report {
+  id             String   @id @default(uuid())
+  reportingUserId String
+  reportingUser   User     @relation("ReportingUser", fields: [reportingUserId], references: [id])
+  reportedUserId  String?
+  reportedUser    User?    @relation("ReportedUser", fields: [reportedUserId], references: [id])
+  rideId          String?
+  type            String
+  description     String
+  status          String   @default("OPEN")
+  internalNotes   String?
+  createdAt       DateTime @default(now())
+  resolvedAt      DateTime?
+
+  @@index([reportedUserId])
+}
+
+model EmergencyContact {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  name   String
+  phone  String
+}
+
+model TripShare {
+  id        String   @id @default(uuid())
+  rideId    String
+  ride      Ride     @relation(fields: [rideId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  channel   String
+  payload   Json
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model OtpRequest {
+  id          String    @id @default(uuid())
+  phone       String
+  otpHash     String
+  expiresAt   DateTime
+  attempts    Int       @default(0)
+  consumedAt  DateTime?
+  requestIp   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([phone, createdAt])
+  @@index([requestIp, createdAt])
+}
+
+model AdminUser {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  phone     String?  @unique
+  name      String
+  role      String
+  createdAt DateTime @default(now())
+  auditLogs AuditLog[]
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  adminUserId String?
+  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id])
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
