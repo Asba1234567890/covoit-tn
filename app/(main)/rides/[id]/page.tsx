@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import BookRideButton from "@/components/BookRideButton";
 import ReportForm from "@/components/ReportForm";
+import RouteMap from "@/components/RouteMapLoader";
+import { formatDistance, formatDuration } from "@/lib/formatRoute";
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const ride = await getRide(params.id);
@@ -37,7 +39,23 @@ export default async function RideDetailsPage({ params }: { params: { id: string
       </h1>
       <p className="text-sm text-neutral-500">
         {new Date(ride.departureAt).toLocaleString()}
+        {(formatDistance(ride.distanceMeters) || formatDuration(ride.durationSeconds)) && (
+          <>
+            {" · "}
+            {[formatDistance(ride.distanceMeters), formatDuration(ride.durationSeconds)].filter(Boolean).join(" · ")}
+          </>
+        )}
       </p>
+
+      <div className="mt-4">
+        <RouteMap
+          originLat={ride.originLat}
+          originLng={ride.originLng}
+          destinationLat={ride.destinationLat}
+          destinationLng={ride.destinationLng}
+          geometry={ride.routeGeometry as any}
+        />
+      </div>
 
       <section className="mt-4 rounded-xl border p-4">
         <p className="font-medium">{ride.driver.firstName}</p>

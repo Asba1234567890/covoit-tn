@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRequireAuth } from "@/lib/useRequireAuth";
+import RouteMap from "@/components/RouteMapLoader";
 
 interface Vehicle {
   id: string;
@@ -346,6 +347,15 @@ export default function OfferRidePage() {
           ))}
         </select>
         <LocationPicker placeholder="Drop-off point" value={destination} onSelect={setDestination} />
+
+        {origin && destination && (
+          <RouteMap
+            originLat={origin.lat}
+            originLng={origin.lng}
+            destinationLat={destination.lat}
+            destinationLng={destination.lng}
+          />
+        )}
 
         {mode === "one-time" ? (
           <div className="flex gap-2">
