@@ -1,5 +1,17 @@
 import { prisma } from "@/server/db/prisma";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import BookRideButton from "@/components/BookRideButton";
+import ReportForm from "@/components/ReportForm";
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const ride = await getRide(params.id);
+  if (!ride) return { title: "Ride not found — Covoit TN" };
+  return {
+    title: `${ride.originLabel} → ${ride.destinationLabel} — Covoit TN`,
+    description: `Carpool from ${ride.originLabel} to ${ride.destinationLabel}, departing ${new Date(ride.departureAt).toLocaleString()}. ${ride.pricePerSeat} TND/seat.`,
+  };
+}
 
 async function getRide(id: string) {
   return prisma.ride.findUnique({
@@ -55,15 +67,13 @@ export default async function RideDetailsPage({ params }: { params: { id: string
         </section>
       )}
 
-      <form action={`/api/rides/${ride.id}/book`} method="post" className="mt-6">
-        <button
-          type="submit"
-          className="w-full rounded-lg bg-black py-3 text-white disabled:opacity-50"
-          disabled={ride.seatsAvailable === 0}
-        >
-          {ride.seatsAvailable === 0 ? "Fully booked" : "Book a seat"}
-        </button>
-      </form>
+      <div className="mt-6">
+        <BookRideButton rideId={ride.id} seatsAvailable={ride.seatsAvailable} />
+      </div>
+
+      <div className="mt-4">
+        <ReportForm reportedUserId={ride.driverId} rideId={ride.id} />
+      </div>
     </main>
   );
 }

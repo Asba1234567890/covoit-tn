@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 
 interface Vehicle {
   id: string;
   make: string;
   model: string;
   color: string;
+  isDefault?: boolean;
 }
 
 interface City {
@@ -174,6 +176,7 @@ const DAYS = [
 ];
 
 export default function OfferRidePage() {
+  const currentUser = useRequireAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleId, setVehicleId] = useState("");
   const [showAddVehicle, setShowAddVehicle] = useState(false);
@@ -196,13 +199,19 @@ export default function OfferRidePage() {
   const [result, setResult] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!currentUser) return;
     fetch("/api/vehicles")
       .then((r) => r.json())
-      .then((d) => setVehicles(d.vehicles ?? []));
+      .then((d) => {
+        const list: Vehicle[] = d.vehicles ?? [];
+        setVehicles(list);
+        const def = list.find((v) => v.isDefault) ?? list[0];
+        if (def) setVehicleId(def.id);
+      });
     fetch("/api/cities")
       .then((r) => r.json())
       .then((d) => setCities(d.cities ?? []));
-  }, []);
+  }, [currentUser]);
 
   function toggleDay(v: number) {
     setDays((prev) => (prev.includes(v) ? prev.filter((d) => d !== v) : [...prev, v]));
@@ -253,6 +262,10 @@ export default function OfferRidePage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (!currentUser) {
+    return <p className="px-4 py-6 text-sm text-neutral-500">Loading…</p>;
   }
 
   return (
