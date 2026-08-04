@@ -13,6 +13,7 @@ interface Vehicle {
   seatsTotal: number;
   verificationStatus: string;
   isDefault: boolean;
+  photoUrls: string[];
 }
 
 const emptyForm = { make: "", model: "", year: "", color: "", licensePlate: "", seatsTotal: 4 };
@@ -25,6 +26,7 @@ export default function VehiclesPage() {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   function load() {
     fetch("/api/vehicles")
@@ -115,6 +117,41 @@ export default function VehiclesPage() {
     }
   }
 
+  async function uploadPhoto(vehicle: Vehicle, file: File) {
+    setUploadingId(vehicle.id);
+    try {
+      const body = new FormData();
+      body.set("file", file);
+      body.set("kind", "vehicle");
+      body.set("vehicleId", vehicle.id);
+      const res = await fetch("/api/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not upload photo");
+      await fetch(`/api/vehicles/${vehicle.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ photoUrls: [...vehicle.photoUrls, data.url] }),
+      });
+      load();
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
+  async function removePhoto(vehicle: Vehicle, url: string) {
+    setUploadingId(vehicle.id);
+    try {
+      await fetch(`/api/vehicles/${vehicle.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ photoUrls: vehicle.photoUrls.filter((u) => u !== url) }),
+      });
+      load();
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
   if (!currentUser) {
     return <p className="px-4 py-6 text-sm text-neutral-500">Loading…</p>;
   }
@@ -171,7 +208,26 @@ export default function VehiclesPage() {
                 </p>
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+
+            {v.photoUrls.length > 0 && (
+              <div className="mt-3 flex gap-2">
+                {v.photoUrls.map((url) => (
+                  <div key={url} className="group relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                    <button
+                      className="absolute -right-1 -top-1 rounded-full bg-black px-1.5 text-xs text-white"
+                      onClick={() => removePhoto(v, url)}
+                      disabled={uploadingId === v.id}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
               {!v.isDefault && (
                 <button className="rounded-lg border px-2 py-1" onClick={() => makeDefault(v.id)} disabled={busy}>
                   Set as default
@@ -183,6 +239,20 @@ export default function VehiclesPage() {
               <button className="rounded-lg border border-red-300 px-2 py-1 text-red-700" onClick={() => remove(v.id)} disabled={busy}>
                 Delete
               </button>
+              <label className="cursor-pointer rounded-lg border px-2 py-1">
+                {uploadingId === v.id ? "Uploading…" : "+ Add photo"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  disabled={uploadingId === v.id}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadPhoto(v, file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
             </div>
           </div>
         ))}

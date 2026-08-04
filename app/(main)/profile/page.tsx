@@ -28,6 +28,7 @@ export default function ProfilePage() {
   const [profilePhotoUrl, setProfilePhotoUrl] = useState("");
   const [languages, setLanguages] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,6 +46,24 @@ export default function ProfilePage() {
 
   function toggleLanguage(l: string) {
     setLanguages((prev) => (prev.includes(l) ? prev.filter((x) => x !== l) : [...prev, l]));
+  }
+
+  async function uploadPhoto(file: File) {
+    setUploading(true);
+    setMessage(null);
+    try {
+      const body = new FormData();
+      body.set("file", file);
+      body.set("kind", "profile");
+      const res = await fetch("/api/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not upload photo");
+      setProfilePhotoUrl(data.url);
+    } catch (e) {
+      setMessage((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function save() {
@@ -126,13 +145,24 @@ export default function ProfilePage() {
           />
         </div>
         <div>
-          <label className="text-sm text-neutral-600">Profile photo URL</label>
-          <input
-            className="mt-1 w-full rounded-lg border px-3 py-2"
-            placeholder="https://…"
-            value={profilePhotoUrl}
-            onChange={(e) => setProfilePhotoUrl(e.target.value)}
-          />
+          <label className="text-sm text-neutral-600">Profile photo</label>
+          <div className="mt-1 flex items-center gap-3">
+            {profilePhotoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profilePhotoUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+            )}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={uploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadPhoto(file);
+              }}
+              className="text-sm"
+            />
+          </div>
+          {uploading && <p className="mt-1 text-xs text-neutral-500">Uploading…</p>}
         </div>
         <div>
           <label className="text-sm text-neutral-600">Languages</label>
