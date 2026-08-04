@@ -35,6 +35,7 @@ export function createMockPrisma() {
     recurringRide: model(),
     review: model(),
     blockedUser: model(),
+    verification: model(),
     $queryRaw: vi.fn(),
     $transaction: vi.fn(async (arg: any) => {
       if (Array.isArray(arg)) return Promise.all(arg);

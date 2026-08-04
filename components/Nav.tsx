@@ -67,6 +67,9 @@ export default function Nav() {
                   </span>
                 )}
               </Link>
+              <Link href="/verification" className="whitespace-nowrap rounded-lg px-2 py-1.5 hover:bg-neutral-100">
+                Verification
+              </Link>
               <Link href="/profile" className="whitespace-nowrap rounded-lg px-2 py-1.5 hover:bg-neutral-100">
                 {user.firstName}
               </Link>
