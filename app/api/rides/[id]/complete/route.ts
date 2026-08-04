@@ -32,6 +32,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       where: { id: params.id },
       data: { status: "COMPLETED", completedAt: new Date() },
     });
+    // DriverProfile.completedRidesCount was otherwise never incremented
+    // anywhere in the app — it stayed 0 forever despite being shown on the
+    // ride details page and profile. Only count rides that actually carried
+    // a passenger, matching the TRIP_COMPLETED notification condition below.
+    if (completedBookings.length > 0) {
+      await tx.driverProfile.update({
+        where: { userId: ride.driverId },
+        data: { completedRidesCount: { increment: 1 } },
+      });
+    }
     return { updated, completedBookings };
   });
 
