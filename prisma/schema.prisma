@@ -37,6 +37,7 @@ model City {
   country   Country  @relation(fields: [countryId], references: [id])
   name      String
   nameAr    String?
+  region    String?  // governorate name, e.g. "Tunis", "Sousse"
   lat       Float
   lng       Float
   isActive  Boolean  @default(true)
@@ -144,9 +145,13 @@ model Vehicle {
   user        User    @relation(fields: [userId], references: [id])
   make        String
   model       String
+  year        Int?
   color       String
   licensePlate String
   seatsTotal  Int
+  photoUrls   String[] @default([])
+  verificationStatus String @default("UNVERIFIED")
+  isDefault   Boolean @default(false)
   createdAt   DateTime @default(now())
   rides       Ride[]
 
