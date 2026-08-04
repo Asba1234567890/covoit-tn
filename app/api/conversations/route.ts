@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { rideId } = body;
+  const { rideId, passengerId } = body;
   if (!rideId) return NextResponse.json({ error: "rideId is required" }, { status: 400 });
 
   const ride = await prisma.ride.findUnique({
@@ -22,11 +22,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "You need a booking on this ride to message the driver" }, { status: 403 });
   }
 
-  // One conversation per (ride, passenger) pair — reuse if it already exists.
+  // A ride can have several passengers, each with their own conversation
+  // with the driver. A passenger always has exactly one conversation for a
+  // given ride, so "some participant = me" is unambiguous for them — but
+  // the driver is in every one of that ride's conversations, so the driver
+  // must say which passenger they mean.
+  const otherUserId = isDriver ? passengerId : ride.driverId;
+  if (isDriver && !otherUserId) {
+    return NextResponse.json({ error: "passengerId is required when the driver starts a conversation" }, { status: 400 });
+  }
+  if (isDriver) {
+    const hasBooking = await prisma.booking.findFirst({
+      where: { rideId, passengerId: otherUserId, status: { in: ["PENDING", "ACCEPTED", "COMPLETED"] } },
+    });
+    if (!hasBooking) {
+      return NextResponse.json({ error: "That passenger has no booking on this ride" }, { status: 403 });
+    }
+  }
+
   let conversation = await prisma.conversation.findFirst({
     where: {
       rideId,
       participants: { some: { userId: user.id } },
+      AND: { participants: { some: { userId: otherUserId } } },
     },
     include: { participants: true },
   });
@@ -35,9 +53,7 @@ export async function POST(req: NextRequest) {
     conversation = await prisma.conversation.create({
       data: {
         rideId,
-        participants: {
-          create: [{ userId: user.id }, ...(isDriver ? [] : [{ userId: ride.driverId }])],
-        },
+        participants: { create: [{ userId: user.id }, { userId: otherUserId }] },
       },
       include: { participants: true },
     });

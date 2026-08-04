@@ -19,14 +19,33 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const isParticipant = await assertParticipant(params.id, user.id);
   if (!isParticipant) return NextResponse.json({ error: "Not a participant in this conversation" }, { status: 403 });
 
-  const messages = await prisma.message.findMany({
-    where: { conversationId: params.id },
-    include: { sender: { select: { firstName: true } } },
-    orderBy: { createdAt: "asc" },
-    take: 200,
-  });
+  const [messages, conversation] = await Promise.all([
+    prisma.message.findMany({
+      where: { conversationId: params.id },
+      include: { sender: { select: { firstName: true } } },
+      orderBy: { createdAt: "asc" },
+      take: 200,
+    }),
+    prisma.conversation.findUnique({
+      where: { id: params.id },
+      include: {
+        ride: { select: { originLabel: true, destinationLabel: true, departureAt: true } },
+        participants: { include: { user: { select: { id: true, firstName: true } } } },
+      },
+    }),
+  ]);
 
-  return NextResponse.json({ messages });
+  return NextResponse.json({
+    messages,
+    conversation: conversation
+      ? {
+          ride: conversation.ride,
+          otherParticipants: conversation.participants
+            .map((p: (typeof conversation.participants)[number]) => p.user)
+            .filter((u: { id: string; firstName: string }) => u.id !== user.id),
+        }
+      : null,
+  });
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
