@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/server/auth/session";
 import { prisma } from "@/server/db/prisma";
-import { isBlocked } from "@/server/users/blockService";
+import { isBlocked, getBlockedIds } from "@/server/users/blockService";
 
 export async function POST(req: NextRequest) {
   const user = await getSessionUser(req);
@@ -71,8 +71,22 @@ export async function GET(req: NextRequest) {
   const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
+  // Mutual: hide threads with anyone the user blocked, or who blocked the
+  // user, matching the same block relationship already enforced on sending
+  // new messages and on search results.
+  const blockedIds = await getBlockedIds(user.id);
+  const blockedByIds = (
+    await prisma.blockedUser.findMany({ where: { blockedId: user.id }, select: { blockerId: true } })
+  ).map((r: { blockerId: string }) => r.blockerId);
+  const excludedUserIds = [...new Set([...blockedIds, ...blockedByIds])];
+
   const conversations = await prisma.conversation.findMany({
-    where: { participants: { some: { userId: user.id } } },
+    where: {
+      participants: { some: { userId: user.id } },
+      ...(excludedUserIds.length > 0 && {
+        NOT: { participants: { some: { userId: { in: excludedUserIds } } } },
+      }),
+    },
     include: {
       ride: { select: { originLabel: true, destinationLabel: true, departureAt: true } },
       participants: { include: { user: { select: { firstName: true } } } },
