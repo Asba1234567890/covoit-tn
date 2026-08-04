@@ -87,6 +87,8 @@ model User {
   favorites     Favorite[]
   reports       Report[]      @relation("ReportingUser")
   reportedBy    Report[]      @relation("ReportedUser")
+  blockedUsers  BlockedUser[] @relation("BlockerRelation")
+  blockedByUsers BlockedUser[] @relation("BlockedRelation")
   emergencyContacts EmergencyContact[]
   notifications Notification[]
   conversations ConversationParticipant[]
@@ -205,8 +207,11 @@ model Ride {
   destinationLat    Float
   destinationLng    Float
   routeGeometry     Json?
+  distanceMeters    Float?
+  durationSeconds   Int?
   departureAt DateTime
   estimatedArrivalAt DateTime?
+  reminderSentAt DateTime?
   seatsTotal    Int
   seatsAvailable Int
   pricePerSeat  Decimal @db.Decimal(10, 3)
@@ -357,6 +362,18 @@ model Favorite {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model BlockedUser {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("BlockerRelation", fields: [blockerId], references: [id])
+  blockedId String
+  blocked   User     @relation("BlockedRelation", fields: [blockedId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
 }
 
 model Report {

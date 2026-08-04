@@ -25,6 +25,11 @@ function describe(n: Notification): { text: string; href: string } {
       return { text: "A booking was cancelled.", href: "/my-bookings" };
     case "RIDE_CANCELLED":
       return { text: "A ride you booked was cancelled by the driver.", href: "/my-bookings" };
+    case "RIDE_REMINDER":
+      return {
+        text: "Your ride departs soon.",
+        href: p.rideId ? `/rides/${p.rideId}` : "/my-bookings",
+      };
     case "TRIP_COMPLETED":
       return { text: "A trip was marked completed.", href: "/my-bookings" };
     case "REVIEW_AVAILABLE":
