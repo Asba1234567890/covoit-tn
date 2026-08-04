@@ -15,6 +15,7 @@ export function createMockPrisma() {
     update: vi.fn(),
     updateMany: vi.fn(),
     delete: vi.fn(),
+    deleteMany: vi.fn(),
     count: vi.fn(),
     aggregate: vi.fn(),
     upsert: vi.fn(),
@@ -33,6 +34,7 @@ export function createMockPrisma() {
     platformSetting: model(),
     recurringRide: model(),
     review: model(),
+    blockedUser: model(),
     $queryRaw: vi.fn(),
     $transaction: vi.fn(async (arg: any) => {
       if (Array.isArray(arg)) return Promise.all(arg);

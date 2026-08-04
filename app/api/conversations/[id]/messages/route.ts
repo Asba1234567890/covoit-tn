@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/server/auth/session";
 import { prisma } from "@/server/db/prisma";
 import { notify } from "@/server/notifications/notificationService";
+import { isBlocked } from "@/server/users/blockService";
 
 async function assertParticipant(conversationId: string, userId: string) {
   const participant = await prisma.conversationParticipant.findUnique({
@@ -60,15 +61,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!text) return NextResponse.json({ error: "Message body is required" }, { status: 400 });
   if (text.length > 2000) return NextResponse.json({ error: "Message is too long" }, { status: 400 });
 
+  const otherParticipantIds = await prisma.conversationParticipant.findMany({
+    where: { conversationId: params.id, userId: { not: user.id } },
+    select: { userId: true },
+  });
+  for (const p of otherParticipantIds) {
+    if (await isBlocked(user.id, p.userId)) {
+      return NextResponse.json({ error: "You can't message this user" }, { status: 403 });
+    }
+  }
+
   const message = await prisma.message.create({
     data: { conversationId: params.id, senderId: user.id, body: text },
   });
 
-  const otherParticipants = await prisma.conversationParticipant.findMany({
-    where: { conversationId: params.id, userId: { not: user.id } },
-    select: { userId: true },
-  });
-  for (const p of otherParticipants) {
+  for (const p of otherParticipantIds) {
     await notify(p.userId, "NEW_MESSAGE", { conversationId: params.id, messageId: message.id });
   }
 

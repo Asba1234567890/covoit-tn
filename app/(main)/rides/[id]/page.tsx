@@ -1,9 +1,12 @@
 import { prisma } from "@/server/db/prisma";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import type { Metadata } from "next";
 import BookRideButton from "@/components/BookRideButton";
 import ReportForm from "@/components/ReportForm";
+import BlockButton from "@/components/BlockButton";
 import RouteMap from "@/components/RouteMapLoader";
+import VerificationBadge from "@/components/VerificationBadge";
 import { formatDistance, formatDuration } from "@/lib/formatRoute";
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
@@ -58,7 +61,12 @@ export default async function RideDetailsPage({ params }: { params: { id: string
       </div>
 
       <section className="mt-4 rounded-xl border p-4">
-        <p className="font-medium">{ride.driver.firstName}</p>
+        <div className="flex items-center gap-2">
+          <Link href={`/drivers/${ride.driverId}`} className="font-medium hover:underline">
+            {ride.driver.firstName}
+          </Link>
+          <VerificationBadge verificationLevel={ride.driver.verificationLevel} />
+        </div>
         <p className="text-sm text-neutral-600">
           ⭐ {ride.driver.driverProfile?.rating.toFixed(1) ?? "New driver"} ·{" "}
           {ride.driver.driverProfile?.completedRidesCount ?? 0} rides completed
@@ -89,8 +97,9 @@ export default async function RideDetailsPage({ params }: { params: { id: string
         <BookRideButton rideId={ride.id} seatsAvailable={ride.seatsAvailable} />
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 flex items-center gap-3">
         <ReportForm reportedUserId={ride.driverId} rideId={ride.id} />
+        <BlockButton userId={ride.driverId} />
       </div>
     </main>
   );

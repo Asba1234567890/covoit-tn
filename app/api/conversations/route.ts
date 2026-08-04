@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/server/auth/session";
 import { prisma } from "@/server/db/prisma";
+import { isBlocked } from "@/server/users/blockService";
 
 export async function POST(req: NextRequest) {
   const user = await getSessionUser(req);
@@ -38,6 +39,10 @@ export async function POST(req: NextRequest) {
     if (!hasBooking) {
       return NextResponse.json({ error: "That passenger has no booking on this ride" }, { status: 403 });
     }
+  }
+
+  if (await isBlocked(user.id, otherUserId)) {
+    return NextResponse.json({ error: "You can't message this user" }, { status: 403 });
   }
 
   let conversation = await prisma.conversation.findFirst({

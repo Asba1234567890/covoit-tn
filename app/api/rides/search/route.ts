@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
 import { OsmMapProvider } from "@/lib/map/OsmMapProvider";
 import { scoreMatch } from "@/lib/matching/matchingEngine";
+import { getSessionUser } from "@/server/auth/session";
+import { getBlockedIds } from "@/server/users/blockService";
 
 const map = new OsmMapProvider();
 
@@ -22,6 +24,19 @@ export async function GET(req: NextRequest) {
   const dayStart = new Date(`${date}T00:00:00`);
   const dayEnd = new Date(`${date}T23:59:59`);
 
+  // Search works signed-out too, so only look up blocks when there's a
+  // session — blocking a driver's rides from your own results is a
+  // logged-in-only feature by nature (mutual: hides rides from drivers you
+  // blocked, and from drivers who blocked you).
+  const user = await getSessionUser(req);
+  const blockedIds = user ? await getBlockedIds(user.id) : [];
+  const blockedByIds = user
+    ? (await prisma.blockedUser.findMany({ where: { blockedId: user.id }, select: { blockerId: true } })).map(
+        (r: { blockerId: string }) => r.blockerId
+      )
+    : [];
+  const excludedDriverIds = new Set([...blockedIds, ...blockedByIds]);
+
   // Broad candidate set: same-day rides touching either city, ranked afterward
   // by real route-overlap score rather than filtered to exact city match only
   // (spec §10 — do not match only exact origin/destination).
@@ -30,6 +45,7 @@ export async function GET(req: NextRequest) {
       status: "SCHEDULED",
       departureAt: { gte: dayStart, lte: dayEnd },
       seatsAvailable: { gt: 0 },
+      driverId: excludedDriverIds.size > 0 ? { notIn: [...excludedDriverIds] } : undefined,
     },
     include: { driver: { include: { driverProfile: true } }, vehicle: true },
     take: 50,
@@ -63,8 +79,11 @@ export async function GET(req: NextRequest) {
     .map(({ ride, match }) => ({
       id: ride.id,
       driver: {
+        id: ride.driverId,
         firstName: ride.driver.firstName,
         rating: ride.driver.driverProfile?.rating ?? 0,
+        completedRidesCount: ride.driver.driverProfile?.completedRidesCount ?? 0,
+        verificationLevel: ride.driver.verificationLevel,
       },
       vehicle: { make: ride.vehicle.make, model: ride.vehicle.model, color: ride.vehicle.color },
       departureAt: ride.departureAt,
