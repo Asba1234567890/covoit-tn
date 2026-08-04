@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/server/auth/session";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin, StorageNotConfiguredError } from "@/lib/supabaseAdmin";
 import { prisma } from "@/server/db/prisma";
 
 const MAX_BYTES = 5 * 1024 * 1024; // must match the bucket's file_size_limit
@@ -57,7 +57,19 @@ export async function POST(req: NextRequest) {
   const bucket = BUCKETS[kind];
   const bytes = new Uint8Array(await file.arrayBuffer());
 
-  const supabase = getSupabaseAdmin();
+  let supabase;
+  try {
+    supabase = getSupabaseAdmin();
+  } catch (e) {
+    if (e instanceof StorageNotConfiguredError) {
+      return NextResponse.json(
+        { error: "Photo upload is not configured on this server yet. Contact support." },
+        { status: 503 }
+      );
+    }
+    throw e;
+  }
+
   const { error } = await supabase.storage.from(bucket).upload(objectPath, bytes, {
     contentType: file.type,
     upsert: false,

@@ -56,8 +56,13 @@ export default function ProfilePage() {
       body.set("file", file);
       body.set("kind", "profile");
       const res = await fetch("/api/upload", { method: "POST", body });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not upload photo");
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        // Non-JSON response (e.g. a platform error page) — fall through to the status-based message below.
+      }
+      if (!res.ok) throw new Error(data.error ?? `Could not upload photo (${res.status})`);
       setProfilePhotoUrl(data.url);
     } catch (e) {
       setMessage((e as Error).message);

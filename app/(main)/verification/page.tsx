@@ -53,8 +53,13 @@ export default function VerificationPage() {
       body.set("file", file);
       body.set("type", type);
       const res = await fetch("/api/verifications", { method: "POST", body });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not upload document");
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        // Non-JSON response (e.g. a platform error page) — fall through to the status-based message below.
+      }
+      if (!res.ok) throw new Error(data.error ?? `Could not upload document (${res.status})`);
       load();
     } catch (e) {
       setError((e as Error).message);

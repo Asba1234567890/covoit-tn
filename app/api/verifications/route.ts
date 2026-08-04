@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/server/auth/session";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin, StorageNotConfiguredError } from "@/lib/supabaseAdmin";
 import { isDocumentType, submitVerificationDocument, listVerificationsForUser } from "@/server/verification/verificationService";
 
 const BUCKET = "verification-documents";
@@ -51,7 +51,19 @@ export async function POST(req: NextRequest) {
   const objectPath = `${user.id}/${type}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
   const bytes = new Uint8Array(await file.arrayBuffer());
 
-  const supabase = getSupabaseAdmin();
+  let supabase;
+  try {
+    supabase = getSupabaseAdmin();
+  } catch (e) {
+    if (e instanceof StorageNotConfiguredError) {
+      return NextResponse.json(
+        { error: "Document upload is not configured on this server yet. Contact support." },
+        { status: 503 }
+      );
+    }
+    throw e;
+  }
+
   const { error } = await supabase.storage.from(BUCKET).upload(objectPath, bytes, {
     contentType: file.type,
     upsert: false,
