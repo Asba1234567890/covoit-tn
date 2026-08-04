@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 interface SearchResult {
@@ -14,12 +14,24 @@ interface SearchResult {
   matchExplanation: string[];
 }
 
+interface City {
+  id: string;
+  name: string;
+}
+
 export default function SearchPage() {
+  const [cities, setCities] = useState<City[]>([]);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [date, setDate] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/cities")
+      .then((r) => r.json())
+      .then((d) => setCities(d.cities ?? []));
+  }, []);
 
   async function runSearch() {
     setLoading(true);
@@ -42,18 +54,30 @@ export default function SearchPage() {
       <h1 className="mb-4 text-xl font-semibold">Where are you going?</h1>
 
       <div className="flex flex-col gap-3 rounded-xl border p-4">
-        <input
+        <select
           className="rounded-lg border px-3 py-2"
-          placeholder="From (city id for now)"
           value={from}
           onChange={(e) => setFrom(e.target.value)}
-        />
-        <input
+        >
+          <option value="">From</option>
+          {cities.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        <select
           className="rounded-lg border px-3 py-2"
-          placeholder="To (city id for now)"
           value={to}
           onChange={(e) => setTo(e.target.value)}
-        />
+        >
+          <option value="">To</option>
+          {cities.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
         <input
           className="rounded-lg border px-3 py-2"
           type="date"

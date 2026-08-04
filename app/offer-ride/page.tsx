@@ -9,10 +9,89 @@ interface Vehicle {
   color: string;
 }
 
+interface City {
+  id: string;
+  name: string;
+}
+
 interface LocationOption {
   label: string;
   lat: number;
   lng: number;
+}
+
+function AddVehicleForm({ onAdded }: { onAdded: (v: Vehicle) => void }) {
+  const [make, setMake] = useState("");
+  const [model, setModel] = useState("");
+  const [color, setColor] = useState("");
+  const [licensePlate, setLicensePlate] = useState("");
+  const [seatsTotal, setSeatsTotal] = useState(4);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/vehicles", {
+        method: "POST",
+        body: JSON.stringify({ make, model, color, licensePlate, seatsTotal }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not register vehicle");
+      onAdded(data.vehicle);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="mt-2 flex flex-col gap-2">
+      <input
+        className="rounded-lg border px-3 py-2"
+        placeholder="Make (e.g. Renault)"
+        value={make}
+        onChange={(e) => setMake(e.target.value)}
+      />
+      <input
+        className="rounded-lg border px-3 py-2"
+        placeholder="Model (e.g. Clio)"
+        value={model}
+        onChange={(e) => setModel(e.target.value)}
+      />
+      <input
+        className="rounded-lg border px-3 py-2"
+        placeholder="Color"
+        value={color}
+        onChange={(e) => setColor(e.target.value)}
+      />
+      <input
+        className="rounded-lg border px-3 py-2"
+        placeholder="License plate"
+        value={licensePlate}
+        onChange={(e) => setLicensePlate(e.target.value)}
+      />
+      <input
+        type="number"
+        min={1}
+        max={8}
+        className="rounded-lg border px-3 py-2"
+        placeholder="Total seats"
+        value={seatsTotal}
+        onChange={(e) => setSeatsTotal(Number(e.target.value))}
+      />
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <button
+        className="rounded-lg bg-black py-2 text-white disabled:opacity-50"
+        disabled={!make || !model || !color || !licensePlate || !seatsTotal || submitting}
+        onClick={submit}
+      >
+        {submitting ? "Registering…" : "Register vehicle"}
+      </button>
+    </div>
+  );
 }
 
 function LocationPicker({
@@ -99,6 +178,7 @@ export default function OfferRidePage() {
   const [vehicleId, setVehicleId] = useState("");
   const [showAddVehicle, setShowAddVehicle] = useState(false);
 
+  const [cities, setCities] = useState<City[]>([]);
   const [originCityId, setOriginCityId] = useState("");
   const [destinationCityId, setDestinationCityId] = useState("");
   const [origin, setOrigin] = useState<LocationOption | null>(null);
@@ -119,6 +199,9 @@ export default function OfferRidePage() {
     fetch("/api/vehicles")
       .then((r) => r.json())
       .then((d) => setVehicles(d.vehicles ?? []));
+    fetch("/api/cities")
+      .then((r) => r.json())
+      .then((d) => setCities(d.cities ?? []));
   }, []);
 
   function toggleDay(v: number) {
@@ -183,6 +266,15 @@ export default function OfferRidePage() {
             + Register a vehicle first
           </button>
         )}
+        {vehicles.length === 0 && showAddVehicle && (
+          <AddVehicleForm
+            onAdded={(v) => {
+              setVehicles((prev) => [v, ...prev]);
+              setVehicleId(v.id);
+              setShowAddVehicle(false);
+            }}
+          />
+        )}
         {vehicles.length > 0 && (
           <select
             className="w-full rounded-lg border px-3 py-2"
@@ -215,19 +307,31 @@ export default function OfferRidePage() {
       </section>
 
       <section className="flex flex-col gap-3 rounded-xl border p-4">
-        <input
+        <select
           className="rounded-lg border px-3 py-2"
-          placeholder="Departure city id"
           value={originCityId}
           onChange={(e) => setOriginCityId(e.target.value)}
-        />
+        >
+          <option value="">Departure city</option>
+          {cities.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
         <LocationPicker placeholder="Pickup point (e.g. Hammamet louage station)" value={origin} onSelect={setOrigin} />
-        <input
+        <select
           className="rounded-lg border px-3 py-2"
-          placeholder="Destination city id"
           value={destinationCityId}
           onChange={(e) => setDestinationCityId(e.target.value)}
-        />
+        >
+          <option value="">Destination city</option>
+          {cities.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
         <LocationPicker placeholder="Drop-off point" value={destination} onSelect={setDestination} />
 
         {mode === "one-time" ? (
