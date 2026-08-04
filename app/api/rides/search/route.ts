@@ -7,7 +7,11 @@ import { getBlockedIds } from "@/server/users/blockService";
 
 const map = new OsmMapProvider();
 
+const SORTS = ["match", "price_asc", "price_desc", "rating_desc", "departure_asc"] as const;
+type SortBy = (typeof SORTS)[number];
+
 // GET /api/rides/search?originCityId=...&destinationCityId=...&date=YYYY-MM-DD&time=HH:mm
+//   &timeFrom=HH:mm&timeTo=HH:mm&minSeats=1&maxPrice=20&minRating=4&sortBy=match
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const originCityId = searchParams.get("originCityId");
@@ -16,13 +20,21 @@ export async function GET(req: NextRequest) {
   const time = searchParams.get("time") ?? "08:00";
   const maxWalkMeters = Number(searchParams.get("maxWalkMeters") ?? 800);
 
+  const minSeats = Math.max(1, Number(searchParams.get("minSeats") ?? 1));
+  const maxPrice = searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : null;
+  const minRating = searchParams.get("minRating") ? Number(searchParams.get("minRating")) : null;
+  const timeFrom = searchParams.get("timeFrom");
+  const timeTo = searchParams.get("timeTo");
+  const sortByParam = searchParams.get("sortBy") ?? "match";
+  const sortBy: SortBy = SORTS.includes(sortByParam as SortBy) ? (sortByParam as SortBy) : "match";
+
   if (!originCityId || !destinationCityId || !date) {
     return NextResponse.json({ error: "originCityId, destinationCityId and date are required" }, { status: 400 });
   }
 
   const desiredDeparture = new Date(`${date}T${time}:00`);
-  const dayStart = new Date(`${date}T00:00:00`);
-  const dayEnd = new Date(`${date}T23:59:59`);
+  const dayStart = new Date(`${date}T${timeFrom || "00:00"}:00`);
+  const dayEnd = new Date(`${date}T${timeTo || "23:59"}:59`);
 
   // Search works signed-out too, so only look up blocks when there's a
   // session — blocking a driver's rides from your own results is a
@@ -37,14 +49,15 @@ export async function GET(req: NextRequest) {
     : [];
   const excludedDriverIds = new Set([...blockedIds, ...blockedByIds]);
 
-  // Broad candidate set: same-day rides touching either city, ranked afterward
-  // by real route-overlap score rather than filtered to exact city match only
-  // (spec §10 — do not match only exact origin/destination).
+  // Broad candidate set: same-day (or narrower, if timeFrom/timeTo given)
+  // rides touching either city, ranked afterward by real route-overlap
+  // score rather than filtered to exact city match only (spec §10).
   const candidates = await prisma.ride.findMany({
     where: {
       status: "SCHEDULED",
       departureAt: { gte: dayStart, lte: dayEnd },
-      seatsAvailable: { gt: 0 },
+      seatsAvailable: { gte: minSeats },
+      pricePerSeat: maxPrice != null ? { lte: maxPrice } : undefined,
       driverId: excludedDriverIds.size > 0 ? { notIn: [...excludedDriverIds] } : undefined,
     },
     include: { driver: { include: { driverProfile: true } }, vehicle: true },
@@ -73,9 +86,18 @@ export async function GET(req: NextRequest) {
     })
   );
 
+  const sorters: Record<SortBy, (a: (typeof scored)[number], b: (typeof scored)[number]) => number> = {
+    match: (a, b) => b.match.score - a.match.score,
+    price_asc: (a, b) => Number(a.ride.pricePerSeat) - Number(b.ride.pricePerSeat),
+    price_desc: (a, b) => Number(b.ride.pricePerSeat) - Number(a.ride.pricePerSeat),
+    rating_desc: (a, b) => (b.ride.driver.driverProfile?.rating ?? 0) - (a.ride.driver.driverProfile?.rating ?? 0),
+    departure_asc: (a, b) => a.ride.departureAt.getTime() - b.ride.departureAt.getTime(),
+  };
+
   const results = scored
     .filter((r) => r.match.isViable)
-    .sort((a, b) => b.match.score - a.match.score)
+    .filter((r) => minRating == null || (r.ride.driver.driverProfile?.rating ?? 0) >= minRating)
+    .sort(sorters[sortBy])
     .map(({ ride, match }) => ({
       id: ride.id,
       driver: {
