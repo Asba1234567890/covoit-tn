@@ -12,7 +12,7 @@ a finished product.
 - **Next.js 14 + TypeScript** — single codebase for frontend + API routes, matches spec's default recommendation.
 - **PostgreSQL + Prisma** — relational fits the domain (rides, bookings, geospatial queries); Prisma gives type-safe queries and migrations.
 - **Tailwind + shadcn/ui pattern** — fast to build a clean mobile-first UI without fighting CSS.
-- **Map provider: OSM/Nominatim + OSRM for MVP** — key-less and free, so the app runs without signing up for a paid map API first. It sits entirely behind `MapProvider` (`lib/map/MapProvider.ts`), so swapping to Google Maps or Mapbox later means writing one new class, not touching matching/search/booking logic.
+- **Map provider: Google Maps Platform** (`lib/map/GoogleMapProvider.ts`) — Geocoding, Directions, and Places APIs server-side, Maps JavaScript API for the client-side route preview (`components/RouteMap.tsx`). It sits entirely behind `MapProvider` (`lib/map/MapProvider.ts`), so swapping vendors again later means writing one new class, not touching matching/search/booking logic. Needs `GOOGLE_MAPS_API_KEY` and `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (see `.env.example`) and billing enabled on the associated Google Cloud project.
 - **Payment provider: cash only for MVP** — behind `PaymentProvider` (`lib/payment/PaymentProvider.ts`). Booking status and payment status are separate models by design (spec §15), so adding Flouci/Stripe/etc. later doesn't change the booking state machine.
 - **Auth: phone + OTP, no password** — `server/auth/otp.ts`. The in-memory OTP store is dev-only; production needs Redis or a DB-backed table (noted in the file).
 

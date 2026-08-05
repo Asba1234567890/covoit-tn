@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
-import { OsmMapProvider } from "@/lib/map/OsmMapProvider";
+import { GoogleMapProvider } from "@/lib/map/GoogleMapProvider";
 import { scoreMatch } from "@/lib/matching/matchingEngine";
 import { getSessionUser } from "@/server/auth/session";
 import { getBlockedIds } from "@/server/users/blockService";
 
-const map = new OsmMapProvider();
+const map = new GoogleMapProvider();
 
 const SORTS = ["match", "price_asc", "price_desc", "rating_desc", "departure_asc"] as const;
 type SortBy = (typeof SORTS)[number];
@@ -94,9 +94,17 @@ export async function GET(req: NextRequest) {
     departure_asc: (a, b) => a.ride.departureAt.getTime() - b.ride.departureAt.getTime(),
   };
 
-  const results = scored
-    .filter((r) => r.match.isViable)
-    .filter((r) => minRating == null || (r.ride.driver.driverProfile?.rating ?? 0) >= minRating)
+  const viable = scored.filter((r) => r.match.isViable);
+  const afterRating = viable.filter(
+    (r) => minRating == null || (r.ride.driver.driverProfile?.rating ?? 0) >= minRating
+  );
+  // A minimum-rating filter compares against a rating that starts at 0
+  // ("New") until a driver's first approved review — so any floor above 0
+  // can hide viable rides for no reason a passenger can see. Report the
+  // count so the UI can say so instead of presenting a flat empty state.
+  const hiddenByRatingCount = viable.length - afterRating.length;
+
+  const results = afterRating
     .sort(sorters[sortBy])
     .map(({ ride, match }) => ({
       id: ride.id,
@@ -115,5 +123,5 @@ export async function GET(req: NextRequest) {
       matchExplanation: match.explanation,
     }));
 
-  return NextResponse.json({ results });
+  return NextResponse.json({ results, hiddenByRatingCount });
 }

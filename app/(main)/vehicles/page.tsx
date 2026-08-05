@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { buttonClasses } from "@/lib/ui";
 import EmptyState from "@/components/EmptyState";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 interface Vehicle {
   id: string;
@@ -29,6 +30,7 @@ export default function VehiclesPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   function load() {
     fetch("/api/vehicles")
@@ -95,7 +97,6 @@ export default function VehiclesPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm("Delete this vehicle?")) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/vehicles/${id}`, { method: "DELETE" });
@@ -243,7 +244,7 @@ export default function VehiclesPage() {
               <button className={buttonClasses("secondary", "px-2 py-1 text-xs")} onClick={() => startEdit(v)} disabled={busy}>
                 Edit
               </button>
-              <button className={buttonClasses("destructive", "px-2 py-1 text-xs")} onClick={() => remove(v.id)} disabled={busy}>
+              <button className={buttonClasses("destructive", "px-2 py-1 text-xs")} onClick={() => setConfirmDeleteId(v.id)} disabled={busy}>
                 Delete
               </button>
               <label className={buttonClasses("secondary", "cursor-pointer px-2 py-1 text-xs")}>
@@ -265,6 +266,19 @@ export default function VehiclesPage() {
         ))}
         {vehicles.length === 0 && !showAdd && <EmptyState message="No vehicles registered yet." />}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Delete this vehicle?"
+        destructive
+        confirmLabel="Delete vehicle"
+        onConfirm={() => {
+          const id = confirmDeleteId!;
+          setConfirmDeleteId(null);
+          remove(id);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </main>
   );
 }

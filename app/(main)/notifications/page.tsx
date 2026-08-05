@@ -55,8 +55,30 @@ function describe(n: Notification): { title: string; subtitle: string; href: str
         href: "/profile",
         tone: "success",
       };
-    case "DRIVER_VERIFICATION_RESULT":
-      return { title: "Verification update", subtitle: `Your verification status was updated — ${when}`, href: "/profile", tone: "primary" };
+    case "DRIVER_VERIFICATION_RESULT": {
+      // Payload shape differs by trigger: a per-document decision from the
+      // verification queue carries `type` (ID_CARD/PASSPORT/DRIVING_LICENSE/
+      // VEHICLE_REGISTRATION); a direct level bump from the users page
+      // carries `action` (verify_identity/verify_driver) instead.
+      const DOC_LABEL: Record<string, string> = {
+        ID_CARD: "ID card",
+        PASSPORT: "passport",
+        DRIVING_LICENSE: "driving license",
+        VEHICLE_REGISTRATION: "vehicle registration",
+        verify_identity: "identity verification",
+        verify_driver: "driver verification",
+      };
+      const key = (p.type as string) ?? (p.action as string);
+      const label = DOC_LABEL[key] ?? "verification";
+      const approved = p.approved !== false;
+      const reason = p.rejectionReason ? `: ${p.rejectionReason}` : "";
+      return {
+        title: approved ? "Verification approved" : "Verification rejected",
+        subtitle: approved ? `Your ${label} was approved — ${when}` : `Your ${label} was rejected${reason} — ${when}`,
+        href: "/profile",
+        tone: approved ? "success" : "error",
+      };
+    }
     case "NEW_MESSAGE":
       return { title: "New message", subtitle: `You have a new message — ${when}`, href: p.conversationId ? `/messages/${p.conversationId}` : "/messages", tone: "primary" };
     default:

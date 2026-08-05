@@ -7,6 +7,7 @@ import ReportForm from "@/components/ReportForm";
 import ReviewForm from "@/components/ReviewForm";
 import StatusBadge, { type StatusTone } from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { buttonClasses } from "@/lib/ui";
 import { DRIVER_REVIEW_CATEGORIES } from "@/lib/reviewCategories";
 
@@ -52,6 +53,7 @@ export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
 
   function load() {
     fetch("/api/bookings/mine")
@@ -65,7 +67,6 @@ export default function MyBookingsPage() {
   }, [currentUser]);
 
   async function cancel(bookingId: string) {
-    if (!confirm("Cancel this booking?")) return;
     setBusy(bookingId);
     try {
       const res = await fetch(`/api/bookings/${bookingId}/cancel`, { method: "POST", body: JSON.stringify({}) });
@@ -108,7 +109,11 @@ export default function MyBookingsPage() {
 
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
               {["PENDING", "ACCEPTED"].includes(b.status) && (
-                <button className={buttonClasses("destructive", "px-2.5 py-1.5 text-xs")} disabled={busy === b.id} onClick={() => cancel(b.id)}>
+                <button
+                  className={buttonClasses("destructive", "px-2.5 py-1.5 text-xs")}
+                  disabled={busy === b.id}
+                  onClick={() => setConfirmCancelId(b.id)}
+                >
                   Cancel booking
                 </button>
               )}
@@ -142,6 +147,19 @@ export default function MyBookingsPage() {
         ))}
         {bookings.length === 0 && <EmptyState message="No bookings yet. Go find a ride!" />}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmCancelId}
+        title="Cancel this booking?"
+        destructive
+        confirmLabel="Cancel booking"
+        onConfirm={() => {
+          const id = confirmCancelId!;
+          setConfirmCancelId(null);
+          cancel(id);
+        }}
+        onCancel={() => setConfirmCancelId(null)}
+      />
     </main>
   );
 }

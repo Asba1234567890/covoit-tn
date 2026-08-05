@@ -1,7 +1,7 @@
 import { prisma } from "@/server/db/prisma";
-import { OsmMapProvider } from "@/lib/map/OsmMapProvider";
+import { GoogleMapProvider } from "@/lib/map/GoogleMapProvider";
 
-const map = new OsmMapProvider();
+const map = new GoogleMapProvider();
 
 export interface OneTimeRideInput {
   driverId: string;

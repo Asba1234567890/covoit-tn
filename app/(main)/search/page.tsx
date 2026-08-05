@@ -41,6 +41,7 @@ function SearchPageInner() {
   const [date, setDate] = useState(initialParams.get("date") ?? "");
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hiddenByRatingCount, setHiddenByRatingCount] = useState(0);
 
   const [minSeats, setMinSeats] = useState(1);
   const [maxPrice, setMaxPrice] = useState("");
@@ -56,9 +57,10 @@ function SearchPageInner() {
       .then((d) => setCities(d.cities ?? []));
   }, []);
 
-  async function runSearch() {
+  async function runSearch(overrides?: { minRating?: string }) {
     setLoading(true);
     try {
+      const effectiveMinRating = overrides?.minRating ?? minRating;
       const params = new URLSearchParams({
         originCityId: from,
         destinationCityId: to,
@@ -67,13 +69,14 @@ function SearchPageInner() {
         sortBy,
       });
       if (maxPrice) params.set("maxPrice", maxPrice);
-      if (minRating) params.set("minRating", minRating);
+      if (effectiveMinRating) params.set("minRating", effectiveMinRating);
       if (timeFrom) params.set("timeFrom", timeFrom);
       if (timeTo) params.set("timeTo", timeTo);
 
       const res = await fetch(`/api/rides/search?${params.toString()}`);
       const data = await res.json();
       setResults(data.results ?? []);
+      setHiddenByRatingCount(data.hiddenByRatingCount ?? 0);
 
       const originLabel = cities.find((c) => c.id === from)?.name ?? "";
       const destinationLabel = cities.find((c) => c.id === to)?.name ?? "";
@@ -98,6 +101,12 @@ function SearchPageInner() {
     if (results !== null) runSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortBy]);
+
+  function clearRatingFilter() {
+    setMinRating("");
+    setShowMoreFilters(true);
+    runSearch({ minRating: "" });
+  }
 
   const fromName = cities.find((c) => c.id === from)?.name;
   const toName = cities.find((c) => c.id === to)?.name;
@@ -193,7 +202,7 @@ function SearchPageInner() {
           </div>
         )}
 
-        <button className={buttonClasses("primary")} onClick={runSearch} disabled={!from || !to || !date || loading}>
+        <button className={buttonClasses("primary")} onClick={() => runSearch()} disabled={!from || !to || !date || loading}>
           {loading ? "Searching…" : "Search"}
         </button>
       </div>
@@ -215,6 +224,15 @@ function SearchPageInner() {
             ))}
           </select>
         </div>
+      )}
+
+      {results !== null && hiddenByRatingCount > 0 && (
+        <p className="mt-1.5 text-xs text-ink-secondary">
+          {hiddenByRatingCount} more ride{hiddenByRatingCount === 1 ? "" : "s"} hidden by your rating filter —{" "}
+          <button onClick={clearRatingFilter} className="font-semibold text-primary underline">
+            clear it
+          </button>
+        </p>
       )}
 
       <div className="mt-3 flex flex-col gap-3">
@@ -243,7 +261,17 @@ function SearchPageInner() {
             </Link>
           ))}
 
-        {!loading && results && results.length === 0 && (
+        {!loading && results && results.length === 0 && hiddenByRatingCount > 0 && (
+          <EmptyState
+            message={`${hiddenByRatingCount} ride${hiddenByRatingCount === 1 ? "" : "s"} match, but ${hiddenByRatingCount === 1 ? "its driver doesn't" : "their drivers don't"} meet your rating filter yet.`}
+            action={
+              <button onClick={clearRatingFilter} className="underline">
+                Clear rating filter →
+              </button>
+            }
+          />
+        )}
+        {!loading && results && results.length === 0 && hiddenByRatingCount === 0 && (
           <EmptyState
             message="No rides match yet."
             action={

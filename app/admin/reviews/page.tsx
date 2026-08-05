@@ -16,9 +16,14 @@ interface AdminReviewRow {
 
 export default function AdminReviewsPage() {
   const [reviews, setReviews] = useState<AdminReviewRow[]>([]);
+  const [loading, setLoading] = useState(false);
 
   function load() {
-    fetch("/api/admin/reviews?status=PENDING").then((r) => r.json()).then((d) => setReviews(d.reviews ?? []));
+    setLoading(true);
+    fetch("/api/admin/reviews?status=PENDING")
+      .then((r) => r.json())
+      .then((d) => setReviews(d.reviews ?? []))
+      .finally(() => setLoading(false));
   }
 
   useEffect(load, []);
@@ -52,7 +57,7 @@ export default function AdminReviewsPage() {
           </div>
           );
         })}
-        {reviews.length === 0 && <EmptyState message="Nothing pending review." />}
+        {reviews.length === 0 && !loading && <EmptyState message="Nothing pending review." />}
       </div>
     </div>
   );

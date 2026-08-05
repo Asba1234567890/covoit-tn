@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import StatusBadge, { type StatusTone } from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { buttonClasses } from "@/lib/ui";
 
 interface AdminRideRow {
@@ -31,6 +32,7 @@ export default function AdminRidesPage() {
   const [rides, setRides] = useState<AdminRideRow[]>([]);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -48,8 +50,7 @@ export default function AdminRidesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
-  async function cancelRide(rideId: string) {
-    const reason = prompt("Reason for cancelling this ride?") ?? "Cancelled by admin";
+  async function cancelRide(rideId: string, reason: string) {
     await fetch("/api/admin/rides", { method: "POST", body: JSON.stringify({ rideId, action: "cancel", reason }) });
     load();
   }
@@ -90,7 +91,7 @@ export default function AdminRidesPage() {
                 </p>
               </div>
               {r.status === "SCHEDULED" && (
-                <button className={buttonClasses("destructive", "shrink-0 px-2 py-1 text-xs")} onClick={() => cancelRide(r.id)}>
+                <button className={buttonClasses("destructive", "shrink-0 px-2 py-1 text-xs")} onClick={() => setConfirmCancelId(r.id)}>
                   Cancel ride
                 </button>
               )}
@@ -99,6 +100,22 @@ export default function AdminRidesPage() {
         ))}
         {rides.length === 0 && !loading && <EmptyState message="No rides found." />}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmCancelId}
+        title="Cancel this ride?"
+        requireReason
+        reasonPlaceholder="Reason for cancelling this ride?"
+        defaultReason="Cancelled by admin"
+        confirmLabel="Cancel ride"
+        destructive
+        onConfirm={(reason) => {
+          const id = confirmCancelId!;
+          setConfirmCancelId(null);
+          cancelRide(id, reason!);
+        }}
+        onCancel={() => setConfirmCancelId(null)}
+      />
     </div>
   );
 }

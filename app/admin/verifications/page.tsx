@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import StatusBadge, { type StatusTone } from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { buttonClasses } from "@/lib/ui";
 
 interface AdminVerificationRow {
@@ -26,11 +27,15 @@ export default function AdminVerificationsPage() {
   const [status, setStatus] = useState("PENDING");
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [confirmRejectId, setConfirmRejectId] = useState<string | null>(null);
 
   function load() {
+    setLoading(true);
     fetch(`/api/admin/verifications?status=${status}`)
       .then((r) => r.json())
-      .then((d) => setRows(d.verifications ?? []));
+      .then((d) => setRows(d.verifications ?? []))
+      .finally(() => setLoading(false));
   }
 
   useEffect(load, [status]);
@@ -57,9 +62,7 @@ export default function AdminVerificationsPage() {
     }
   }
 
-  async function reject(id: string) {
-    const rejectionReason = prompt("Reason for rejecting this document?");
-    if (!rejectionReason) return;
+  async function reject(id: string, rejectionReason: string) {
     setBusy(id);
     try {
       await fetch("/api/admin/verifications", {
@@ -114,7 +117,7 @@ export default function AdminVerificationsPage() {
                   <button className={buttonClasses("secondary", "px-2 py-1 text-xs")} disabled={busy === r.id} onClick={() => approve(r.id)}>
                     Approve
                   </button>
-                  <button className={buttonClasses("destructive", "px-2 py-1 text-xs")} disabled={busy === r.id} onClick={() => reject(r.id)}>
+                  <button className={buttonClasses("destructive", "px-2 py-1 text-xs")} disabled={busy === r.id} onClick={() => setConfirmRejectId(r.id)}>
                     Reject
                   </button>
                 </>
@@ -123,8 +126,23 @@ export default function AdminVerificationsPage() {
             {docUrls[r.id] && <p className="mt-1 text-[10px] text-ink-secondary/70">Link expires in 5 minutes.</p>}
           </div>
         ))}
-        {rows.length === 0 && <EmptyState message="No documents in this status." />}
+        {rows.length === 0 && !loading && <EmptyState message="No documents in this status." />}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmRejectId}
+        title="Reject this document?"
+        requireReason
+        reasonPlaceholder="Reason for rejecting this document?"
+        confirmLabel="Reject"
+        destructive
+        onConfirm={(reason) => {
+          const id = confirmRejectId!;
+          setConfirmRejectId(null);
+          reject(id, reason!);
+        }}
+        onCancel={() => setConfirmRejectId(null)}
+      />
     </div>
   );
 }
