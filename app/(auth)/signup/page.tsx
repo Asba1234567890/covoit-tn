@@ -1,9 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { buttonClasses } from "@/lib/ui";
 
 type AuthMethod = "otp" | "password" | "reset";
 type AuthMode = "signup" | "login";
+
+const INPUT = "rounded-control border border-neutral-200 px-3 py-2.5 text-sm text-ink";
+const LABEL = "text-sm text-ink-secondary";
+
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      className={`flex-1 rounded-control border py-2 text-sm font-semibold ${
+        active ? "border-primary bg-primary text-white" : "border-neutral-200 text-ink"
+      }`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
 
 export default function SignupPage() {
   const [method, setMethod] = useState<AuthMethod>("otp");
@@ -122,136 +140,138 @@ export default function SignupPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 px-6">
-      <h1 className="text-2xl font-semibold">Covoit TN</h1>
+      <h1 className="font-display text-lg font-bold text-ink">Covoit TN</h1>
 
-      <div className="flex gap-2">
-        <button
-          className={`flex-1 rounded-lg border py-2 text-sm ${method === "otp" ? "bg-black text-white" : ""}`}
-          onClick={() => switchMethod("otp")}
-        >
-          Sign in with OTP
-        </button>
-        <button
-          className={`flex-1 rounded-lg border py-2 text-sm ${method === "password" ? "bg-black text-white" : ""}`}
-          onClick={() => switchMethod("password")}
-        >
-          Sign in with password
-        </button>
+      <div className="flex flex-col gap-4 rounded-card bg-white p-5 shadow-card">
+        <div className="flex gap-2">
+          <TabButton active={method === "otp"} onClick={() => switchMethod("otp")}>
+            Sign in with OTP
+          </TabButton>
+          <TabButton active={method === "password"} onClick={() => switchMethod("password")}>
+            Sign in with password
+          </TabButton>
+        </div>
+
+        {method === "otp" && step === "phone" && (
+          <>
+            <label className={LABEL}>Phone number</label>
+            <input className={INPUT} placeholder="+216 XX XXX XXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <button className={buttonClasses("primary")} disabled={!phone || loading || cooldownSeconds > 0} onClick={requestOtp}>
+              {loading ? "Sending…" : cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : "Send code via WhatsApp"}
+            </button>
+          </>
+        )}
+
+        {method === "otp" && step === "otp" && (
+          <>
+            <p className="text-sm text-ink-secondary">We sent a code to {phone} on WhatsApp.</p>
+            <label className={LABEL}>Enter the 6-digit code</label>
+            <input className={`${INPUT} tracking-widest`} maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} />
+            <label className={LABEL}>First name</label>
+            <input className={INPUT} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <button className={buttonClasses("primary")} disabled={code.length !== 6 || !firstName || loading} onClick={confirmOtp}>
+              {loading ? "Verifying…" : "Continue"}
+            </button>
+            <button
+              type="button"
+              className="text-center text-sm text-ink-secondary underline disabled:opacity-50 disabled:no-underline"
+              disabled={cooldownSeconds > 0 || loading}
+              onClick={requestOtp}
+            >
+              {cooldownSeconds > 0 ? `Resend code in ${cooldownSeconds}s` : "Resend code"}
+            </button>
+          </>
+        )}
+
+        {method === "password" && (
+          <>
+            <div className="flex gap-2 text-sm">
+              <button
+                className={`flex-1 py-1 ${mode === "signup" ? "font-semibold text-primary underline" : "text-ink-secondary"}`}
+                onClick={() => setMode("signup")}
+              >
+                Create account
+              </button>
+              <button
+                className={`flex-1 py-1 ${mode === "login" ? "font-semibold text-primary underline" : "text-ink-secondary"}`}
+                onClick={() => setMode("login")}
+              >
+                Log in
+              </button>
+            </div>
+
+            <label className={LABEL}>Phone number</label>
+            <input className={INPUT} placeholder="+216 XX XXX XXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
+
+            {mode === "signup" && (
+              <>
+                <label className={LABEL}>First name</label>
+                <input className={INPUT} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              </>
+            )}
+
+            <label className={LABEL}>Password</label>
+            <input className={INPUT} type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            {mode === "signup" && <p className="text-xs text-ink-secondary">At least 8 characters.</p>}
+
+            <button
+              className={buttonClasses("primary")}
+              disabled={!phone || !password || (mode === "signup" && !firstName) || loading}
+              onClick={submitPassword}
+            >
+              {loading ? "Please wait…" : mode === "signup" ? "Create account" : "Log in"}
+            </button>
+
+            {mode === "login" && (
+              <button type="button" className="text-center text-sm text-ink-secondary underline" onClick={() => switchMethod("reset")}>
+                Forgot password?
+              </button>
+            )}
+          </>
+        )}
+
+        {method === "reset" && step === "phone" && (
+          <>
+            <p className="text-sm text-ink-secondary">We'll send a code via WhatsApp to reset your password.</p>
+            <label className={LABEL}>Phone number</label>
+            <input className={INPUT} placeholder="+216 XX XXX XXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <button className={buttonClasses("primary")} disabled={!phone || loading || cooldownSeconds > 0} onClick={requestOtp}>
+              {loading ? "Sending…" : cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : "Send code via WhatsApp"}
+            </button>
+            <button type="button" className="text-center text-sm text-ink-secondary underline" onClick={() => switchMethod("password")}>
+              Back to log in
+            </button>
+          </>
+        )}
+
+        {method === "reset" && step === "otp" && (
+          <>
+            <p className="text-sm text-ink-secondary">We sent a code to {phone} on WhatsApp.</p>
+            <label className={LABEL}>Enter the 6-digit code</label>
+            <input className={`${INPUT} tracking-widest`} maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} />
+            <label className={LABEL}>New password</label>
+            <input className={INPUT} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            <p className="text-xs text-ink-secondary">At least 8 characters.</p>
+            <button
+              className={buttonClasses("primary")}
+              disabled={code.length !== 6 || newPassword.length < 8 || loading}
+              onClick={submitReset}
+            >
+              {loading ? "Resetting…" : "Reset password"}
+            </button>
+            <button
+              type="button"
+              className="text-center text-sm text-ink-secondary underline disabled:opacity-50 disabled:no-underline"
+              disabled={cooldownSeconds > 0 || loading}
+              onClick={requestOtp}
+            >
+              {cooldownSeconds > 0 ? `Resend code in ${cooldownSeconds}s` : "Resend code"}
+            </button>
+          </>
+        )}
+
+        {error && <p className="rounded-control bg-error/8 p-3 text-sm text-error-dark">{error}</p>}
       </div>
-
-      {method === "otp" && step === "phone" && (
-        <>
-          <label className="text-sm text-neutral-600">Phone number</label>
-          <input className="rounded-lg border px-4 py-3" placeholder="+216 XX XXX XXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <button className="rounded-lg bg-black py-3 text-white disabled:opacity-50" disabled={!phone || loading || cooldownSeconds > 0} onClick={requestOtp}>
-            {loading ? "Sending…" : cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : "Send code via WhatsApp"}
-          </button>
-        </>
-      )}
-
-      {method === "otp" && step === "otp" && (
-        <>
-          <p className="text-sm text-neutral-600">We sent a code to {phone} on WhatsApp.</p>
-          <label className="text-sm text-neutral-600">Enter the 6-digit code</label>
-          <input className="rounded-lg border px-4 py-3 tracking-widest" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} />
-          <label className="text-sm text-neutral-600">First name</label>
-          <input className="rounded-lg border px-4 py-3" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-          <button className="rounded-lg bg-black py-3 text-white disabled:opacity-50" disabled={code.length !== 6 || !firstName || loading} onClick={confirmOtp}>
-            {loading ? "Verifying…" : "Continue"}
-          </button>
-          <button
-            type="button"
-            className="text-center text-sm text-neutral-500 underline disabled:opacity-50 disabled:no-underline"
-            disabled={cooldownSeconds > 0 || loading}
-            onClick={requestOtp}
-          >
-            {cooldownSeconds > 0 ? `Resend code in ${cooldownSeconds}s` : "Resend code"}
-          </button>
-        </>
-      )}
-
-      {method === "password" && (
-        <>
-          <div className="flex gap-2 text-sm">
-            <button className={`flex-1 py-1 ${mode === "signup" ? "font-semibold underline" : "text-neutral-500"}`} onClick={() => setMode("signup")}>
-              Create account
-            </button>
-            <button className={`flex-1 py-1 ${mode === "login" ? "font-semibold underline" : "text-neutral-500"}`} onClick={() => setMode("login")}>
-              Log in
-            </button>
-          </div>
-
-          <label className="text-sm text-neutral-600">Phone number</label>
-          <input className="rounded-lg border px-4 py-3" placeholder="+216 XX XXX XXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
-
-          {mode === "signup" && (
-            <>
-              <label className="text-sm text-neutral-600">First name</label>
-              <input className="rounded-lg border px-4 py-3" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-            </>
-          )}
-
-          <label className="text-sm text-neutral-600">Password</label>
-          <input className="rounded-lg border px-4 py-3" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          {mode === "signup" && <p className="text-xs text-neutral-500">At least 8 characters.</p>}
-
-          <button
-            className="rounded-lg bg-black py-3 text-white disabled:opacity-50"
-            disabled={!phone || !password || (mode === "signup" && !firstName) || loading}
-            onClick={submitPassword}
-          >
-            {loading ? "Please wait…" : mode === "signup" ? "Create account" : "Log in"}
-          </button>
-
-          {mode === "login" && (
-            <button type="button" className="text-center text-sm text-neutral-500 underline" onClick={() => switchMethod("reset")}>
-              Forgot password?
-            </button>
-          )}
-        </>
-      )}
-
-      {method === "reset" && step === "phone" && (
-        <>
-          <p className="text-sm text-neutral-600">We'll send a code via WhatsApp to reset your password.</p>
-          <label className="text-sm text-neutral-600">Phone number</label>
-          <input className="rounded-lg border px-4 py-3" placeholder="+216 XX XXX XXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <button className="rounded-lg bg-black py-3 text-white disabled:opacity-50" disabled={!phone || loading || cooldownSeconds > 0} onClick={requestOtp}>
-            {loading ? "Sending…" : cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : "Send code via WhatsApp"}
-          </button>
-          <button type="button" className="text-center text-sm text-neutral-500 underline" onClick={() => switchMethod("password")}>
-            Back to log in
-          </button>
-        </>
-      )}
-
-      {method === "reset" && step === "otp" && (
-        <>
-          <p className="text-sm text-neutral-600">We sent a code to {phone} on WhatsApp.</p>
-          <label className="text-sm text-neutral-600">Enter the 6-digit code</label>
-          <input className="rounded-lg border px-4 py-3 tracking-widest" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} />
-          <label className="text-sm text-neutral-600">New password</label>
-          <input className="rounded-lg border px-4 py-3" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-          <p className="text-xs text-neutral-500">At least 8 characters.</p>
-          <button
-            className="rounded-lg bg-black py-3 text-white disabled:opacity-50"
-            disabled={code.length !== 6 || newPassword.length < 8 || loading}
-            onClick={submitReset}
-          >
-            {loading ? "Resetting…" : "Reset password"}
-          </button>
-          <button
-            type="button"
-            className="text-center text-sm text-neutral-500 underline disabled:opacity-50 disabled:no-underline"
-            disabled={cooldownSeconds > 0 || loading}
-            onClick={requestOtp}
-          >
-            {cooldownSeconds > 0 ? `Resend code in ${cooldownSeconds}s` : "Resend code"}
-          </button>
-        </>
-      )}
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
     </main>
   );
 }

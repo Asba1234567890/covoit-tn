@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 
 // "Rides & bookings" and "Settings & audit log" in the design mockup (spec
 // §10) map to two existing routes each here (rides/bookings are separate
-// pages; there's no dedicated audit-log viewer) — kept as distinct nav
-// entries rather than merging pages, so no routes change.
+// pages) — kept as distinct nav entries rather than merging pages, so no
+// routes change.
 const NAV = [
   { href: "/admin", label: "Analytics" },
   { href: "/admin/users", label: "Users" },
@@ -15,6 +15,7 @@ const NAV = [
   { href: "/admin/bookings", label: "Bookings" },
   { href: "/admin/reports", label: "Reports" },
   { href: "/admin/reviews", label: "Reviews" },
+  { href: "/admin/audit-log", label: "Audit log" },
   { href: "/admin/settings", label: "Settings" },
 ];
 

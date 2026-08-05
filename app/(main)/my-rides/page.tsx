@@ -7,6 +7,7 @@ import ReportForm from "@/components/ReportForm";
 import ReviewForm from "@/components/ReviewForm";
 import StatusBadge, { type StatusTone } from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { buttonClasses } from "@/lib/ui";
 import { PASSENGER_REVIEW_CATEGORIES } from "@/lib/reviewCategories";
 
@@ -61,6 +62,7 @@ export default function MyRidesPage() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [confirmCancelRideId, setConfirmCancelRideId] = useState<string | null>(null);
 
   function load() {
     fetch("/api/rides/mine")
@@ -91,7 +93,6 @@ export default function MyRidesPage() {
   }
 
   async function rideAction(rideId: string, action: "start" | "complete" | "cancel") {
-    if (action === "cancel" && !confirm("Cancel this ride? All pending/accepted bookings will be cancelled.")) return;
     setBusy(rideId);
     try {
       const res = await fetch(`/api/rides/${rideId}/${action}`, { method: "POST", body: JSON.stringify({}) });
@@ -134,7 +135,7 @@ export default function MyRidesPage() {
                 <button className={buttonClasses("secondary", "px-2.5 py-1.5 text-xs")} disabled={busy === ride.id} onClick={() => rideAction(ride.id, "start")}>
                   Start ride
                 </button>
-                <button className={buttonClasses("destructive", "px-2.5 py-1.5 text-xs")} disabled={busy === ride.id} onClick={() => rideAction(ride.id, "cancel")}>
+                <button className={buttonClasses("destructive", "px-2.5 py-1.5 text-xs")} disabled={busy === ride.id} onClick={() => setConfirmCancelRideId(ride.id)}>
                   Cancel ride
                 </button>
               </div>
@@ -215,6 +216,20 @@ export default function MyRidesPage() {
         ))}
         {rides.length === 0 && <EmptyState message="You haven't published any rides yet." />}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmCancelRideId}
+        title="Cancel this ride?"
+        message="All pending/accepted bookings will be cancelled."
+        destructive
+        confirmLabel="Cancel ride"
+        onConfirm={() => {
+          const id = confirmCancelRideId!;
+          setConfirmCancelRideId(null);
+          rideAction(id, "cancel");
+        }}
+        onCancel={() => setConfirmCancelRideId(null)}
+      />
     </main>
   );
 }

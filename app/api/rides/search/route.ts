@@ -94,9 +94,17 @@ export async function GET(req: NextRequest) {
     departure_asc: (a, b) => a.ride.departureAt.getTime() - b.ride.departureAt.getTime(),
   };
 
-  const results = scored
-    .filter((r) => r.match.isViable)
-    .filter((r) => minRating == null || (r.ride.driver.driverProfile?.rating ?? 0) >= minRating)
+  const viable = scored.filter((r) => r.match.isViable);
+  const afterRating = viable.filter(
+    (r) => minRating == null || (r.ride.driver.driverProfile?.rating ?? 0) >= minRating
+  );
+  // A minimum-rating filter compares against a rating that starts at 0
+  // ("New") until a driver's first approved review — so any floor above 0
+  // can hide viable rides for no reason a passenger can see. Report the
+  // count so the UI can say so instead of presenting a flat empty state.
+  const hiddenByRatingCount = viable.length - afterRating.length;
+
+  const results = afterRating
     .sort(sorters[sortBy])
     .map(({ ride, match }) => ({
       id: ride.id,
@@ -115,5 +123,5 @@ export async function GET(req: NextRequest) {
       matchExplanation: match.explanation,
     }));
 
-  return NextResponse.json({ results });
+  return NextResponse.json({ results, hiddenByRatingCount });
 }

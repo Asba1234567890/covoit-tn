@@ -34,14 +34,27 @@ export class OsmMapProvider implements MapProvider {
       .map((p) => `${p.lng},${p.lat}`)
       .join(";");
     const url = `${OSRM_BASE}/route/v1/driving/${coords}?overview=full&geometries=geojson`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const route = data.routes?.[0];
-    return {
-      distanceMeters: route?.distance ?? haversineMeters(origin, destination),
-      durationSeconds: route?.duration ?? 0,
-      geometry: route?.geometry ?? null,
-    };
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`OSRM responded with ${res.status}`);
+      const data = await res.json();
+      const route = data.routes?.[0];
+      return {
+        distanceMeters: route?.distance ?? haversineMeters(origin, destination),
+        durationSeconds: route?.duration ?? 0,
+        geometry: route?.geometry ?? null,
+      };
+    } catch (e) {
+      // OSRM's public demo instance carries no uptime guarantee — a routing
+      // failure must degrade search/ride-creation to straight-line distance,
+      // not take the whole request down (this call sits on both paths).
+      console.error("[OsmMapProvider] route() failed, falling back to straight-line distance:", (e as Error).message);
+      return {
+        distanceMeters: haversineMeters(origin, destination),
+        durationSeconds: 0,
+        geometry: null,
+      };
+    }
   }
 
   distanceMeters(a: LatLng, b: LatLng): number {

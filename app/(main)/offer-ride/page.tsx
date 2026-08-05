@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import RouteMap from "@/components/RouteMapLoader";
 import { buttonClasses } from "@/lib/ui";
@@ -111,17 +112,27 @@ function LocationPicker({
   const [options, setOptions] = useState<LocationOption[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (query.trim().length < 3 || (value && value.label === query)) {
       setOptions([]);
+      setError(false);
       return;
     }
     setLoading(true);
+    setError(false);
     const handle = setTimeout(() => {
       fetch(`/api/locations?q=${encodeURIComponent(query)}`)
-        .then((r) => r.json())
+        .then((r) => {
+          if (!r.ok) throw new Error("search failed");
+          return r.json();
+        })
         .then((d) => setOptions(d.results ?? []))
+        .catch(() => {
+          setOptions([]);
+          setError(true);
+        })
         .finally(() => setLoading(false));
     }, 350); // debounce so we don't hammer Nominatim on every keystroke
     return () => clearTimeout(handle);
@@ -143,10 +154,14 @@ function LocationPicker({
       {value && value.label === query && (
         <span className="absolute right-3 top-2.5 text-xs text-success-dark">✓ location set</span>
       )}
-      {open && (loading || options.length > 0) && (
+      {open && (loading || error || options.length > 0) && (
         <div className="absolute z-10 mt-1 w-full rounded-control border border-neutral-200 bg-white shadow-card">
           {loading && <p className="px-3 py-2 text-xs text-ink-secondary">Searching…</p>}
+          {!loading && error && (
+            <p className="px-3 py-2 text-xs text-error-dark">Couldn&apos;t search locations right now — try again.</p>
+          )}
           {!loading &&
+            !error &&
             options.map((opt, i) => (
               <button
                 key={i}
@@ -273,6 +288,15 @@ export default function OfferRidePage() {
   return (
     <main className="mx-auto max-w-md px-4 py-6">
       <h1 className="mb-4 font-display text-lg font-bold text-ink">Offer a ride</h1>
+
+      {currentUser.verificationLevel < 3 && (
+        <div className="mb-4 rounded-control bg-warning/10 p-3 text-sm text-warning-dark">
+          Verify your driver documents to publish rides.{" "}
+          <Link href="/verification" className="font-semibold underline">
+            Go to verification
+          </Link>
+        </div>
+      )}
 
       <section className="mb-4 rounded-card bg-white p-4 shadow-card">
         <p className="mb-2 text-sm font-semibold text-ink">Vehicle</p>
@@ -434,7 +458,15 @@ export default function OfferRidePage() {
 
         <button
           className={buttonClasses("primary")}
-          disabled={!vehicleId || !originCityId || !destinationCityId || !origin || !destination || submitting}
+          disabled={
+            !vehicleId ||
+            !originCityId ||
+            !destinationCityId ||
+            !origin ||
+            !destination ||
+            currentUser.verificationLevel < 3 ||
+            submitting
+          }
           onClick={submit}
         >
           {submitting ? "Publishing…" : "Publish ride"}
