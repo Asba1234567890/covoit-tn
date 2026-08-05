@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import VerificationBadge from "@/components/VerificationBadge";
+import TrustCluster from "@/components/TrustCluster";
+import SkeletonCard from "@/components/SkeletonCard";
+import EmptyState from "@/components/EmptyState";
+import { buttonClasses } from "@/lib/ui";
+import { addRecentSearch } from "@/lib/recentSearches";
 
 interface SearchResult {
   id: string;
@@ -28,21 +33,22 @@ const SORT_OPTIONS = [
   { value: "departure_asc", label: "Earliest departure" },
 ];
 
-export default function SearchPage() {
+function SearchPageInner() {
+  const initialParams = useSearchParams();
   const [cities, setCities] = useState<City[]>([]);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [date, setDate] = useState("");
+  const [from, setFrom] = useState(initialParams.get("originCityId") ?? "");
+  const [to, setTo] = useState(initialParams.get("destinationCityId") ?? "");
+  const [date, setDate] = useState(initialParams.get("date") ?? "");
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const [showFilters, setShowFilters] = useState(false);
   const [minSeats, setMinSeats] = useState(1);
   const [maxPrice, setMaxPrice] = useState("");
   const [minRating, setMinRating] = useState("");
   const [timeFrom, setTimeFrom] = useState("");
   const [timeTo, setTimeTo] = useState("");
   const [sortBy, setSortBy] = useState("match");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   useEffect(() => {
     fetch("/api/cities")
@@ -68,138 +74,194 @@ export default function SearchPage() {
       const res = await fetch(`/api/rides/search?${params.toString()}`);
       const data = await res.json();
       setResults(data.results ?? []);
+
+      const originLabel = cities.find((c) => c.id === from)?.name ?? "";
+      const destinationLabel = cities.find((c) => c.id === to)?.name ?? "";
+      if (originLabel && destinationLabel) {
+        addRecentSearch({ originCityId: from, originLabel, destinationCityId: to, destinationLabel });
+      }
     } finally {
       setLoading(false);
     }
   }
 
+  // Arriving from Home with a route already picked — run the search
+  // immediately instead of making the user press Search again.
+  useEffect(() => {
+    if (initialParams.get("originCityId") && initialParams.get("destinationCityId") && initialParams.get("date")) {
+      runSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (results !== null) runSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortBy]);
+
+  const fromName = cities.find((c) => c.id === from)?.name;
+  const toName = cities.find((c) => c.id === to)?.name;
+
   return (
     <main className="mx-auto max-w-md px-4 py-6">
-      <h1 className="mb-4 text-xl font-semibold">Where are you going?</h1>
+      <h1 className="font-display text-lg font-bold text-ink">
+        {fromName && toName ? `${fromName} → ${toName}` : "Where are you going?"}
+      </h1>
 
-      <div className="flex flex-col gap-3 rounded-xl border p-4">
-        <select className="rounded-lg border px-3 py-2" value={from} onChange={(e) => setFrom(e.target.value)}>
-          <option value="">From</option>
-          {cities.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <select className="rounded-lg border px-3 py-2" value={to} onChange={(e) => setTo(e.target.value)}>
-          <option value="">To</option>
-          {cities.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+      <div className="mt-3 flex flex-col gap-2 rounded-card bg-white p-3 shadow-card">
+        <div className="flex gap-2">
+          <select className="w-1/2 rounded-control border border-neutral-200 px-2.5 py-2 text-sm" value={from} onChange={(e) => setFrom(e.target.value)}>
+            <option value="">From</option>
+            {cities.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <select className="w-1/2 rounded-control border border-neutral-200 px-2.5 py-2 text-sm" value={to} onChange={(e) => setTo(e.target.value)}>
+            <option value="">To</option>
+            {cities.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <input
-          className="rounded-lg border px-3 py-2"
+          className="rounded-control border border-neutral-200 px-2.5 py-2 text-sm"
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />
 
-        <button type="button" className="text-left text-sm text-neutral-500 underline" onClick={() => setShowFilters((s) => !s)}>
-          {showFilters ? "Hide filters" : "More filters"}
-        </button>
+        {/* Filters as horizontally scrollable chips (spec §4) — refining stays
+            one thumb-reach away instead of opening a modal. */}
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 py-1">
+          {[1, 2, 3, 4].map((n) => (
+            <button
+              key={n}
+              onClick={() => setMinSeats(n)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
+                minSeats === n ? "bg-primary text-white" : "border border-neutral-200 text-ink-secondary"
+              }`}
+            >
+              {n} seat{n > 1 ? "s" : ""}
+            </button>
+          ))}
+          <button
+            onClick={() => setShowMoreFilters((s) => !s)}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
+              showMoreFilters ? "bg-primary text-white" : "border border-neutral-200 text-ink-secondary"
+            }`}
+          >
+            {maxPrice || minRating || timeFrom || timeTo ? "Filters •" : "More filters"}
+          </button>
+        </div>
 
-        {showFilters && (
-          <div className="flex flex-col gap-2 rounded-lg bg-neutral-50 p-3">
+        {showMoreFilters && (
+          <div className="flex flex-col gap-2 rounded-control bg-neutral-50 p-3">
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="text-xs text-neutral-600">From time</label>
-                <input type="time" className="mt-1 w-full rounded-lg border px-2 py-1.5 text-sm" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} />
+                <label className="text-xs text-ink-secondary">From time</label>
+                <input type="time" className="mt-1 w-full rounded-control border border-neutral-200 px-2 py-1.5 text-sm" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} />
               </div>
               <div className="flex-1">
-                <label className="text-xs text-neutral-600">To time</label>
-                <input type="time" className="mt-1 w-full rounded-lg border px-2 py-1.5 text-sm" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="text-xs text-neutral-600">Seats needed</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={8}
-                  className="mt-1 w-full rounded-lg border px-2 py-1.5 text-sm"
-                  value={minSeats}
-                  onChange={(e) => setMinSeats(Number(e.target.value))}
-                />
-              </div>
-              <div className="flex-1">
-                <label className="text-xs text-neutral-600">Max price (TND)</label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.5"
-                  className="mt-1 w-full rounded-lg border px-2 py-1.5 text-sm"
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
-                />
+                <label className="text-xs text-ink-secondary">To time</label>
+                <input type="time" className="mt-1 w-full rounded-control border border-neutral-200 px-2 py-1.5 text-sm" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} />
               </div>
             </div>
             <div>
-              <label className="text-xs text-neutral-600">Minimum driver rating</label>
-              <select className="mt-1 w-full rounded-lg border px-2 py-1.5 text-sm" value={minRating} onChange={(e) => setMinRating(e.target.value)}>
+              <label className="text-xs text-ink-secondary">Max price (TND)</label>
+              <input
+                type="number"
+                min={0}
+                step="0.5"
+                className="mt-1 w-full rounded-control border border-neutral-200 px-2 py-1.5 text-sm"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-ink-secondary">Minimum driver rating</label>
+              <select className="mt-1 w-full rounded-control border border-neutral-200 px-2 py-1.5 text-sm" value={minRating} onChange={(e) => setMinRating(e.target.value)}>
                 <option value="">Any</option>
                 <option value="3">3+ ⭐</option>
                 <option value="4">4+ ⭐</option>
                 <option value="4.5">4.5+ ⭐</option>
               </select>
             </div>
-            <div>
-              <label className="text-xs text-neutral-600">Sort by</label>
-              <select className="mt-1 w-full rounded-lg border px-2 py-1.5 text-sm" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
         )}
 
-        <button
-          className="rounded-lg bg-black py-2 text-white disabled:opacity-50"
-          onClick={runSearch}
-          disabled={!from || !to || !date || loading}
-        >
+        <button className={buttonClasses("primary")} onClick={runSearch} disabled={!from || !to || !date || loading}>
           {loading ? "Searching…" : "Search"}
         </button>
       </div>
 
-      <div className="mt-6 flex flex-col gap-3">
-        {results?.map((r) => (
-          <Link key={r.id} href={`/rides/${r.id}`} className="rounded-xl border p-4 hover:bg-neutral-50">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 font-medium">
-                {r.driver.firstName}
-                <VerificationBadge verificationLevel={r.driver.verificationLevel} />
-              </span>
-              <span className="rounded-full bg-green-100 px-2 py-1 text-xs text-green-800">{r.matchScore}% Match</span>
-            </div>
-            <p className="text-sm text-neutral-600">
-              ⭐ {r.driver.rating > 0 ? r.driver.rating.toFixed(1) : "New"} · {r.driver.completedRidesCount} rides completed
-            </p>
-            <p className="text-sm text-neutral-600">
-              {r.vehicle.color} {r.vehicle.make} {r.vehicle.model} · {r.seatsAvailable} seats left
-            </p>
-            <p className="text-sm">{r.pricePerSeat} TND / seat</p>
-            <ul className="mt-1 text-xs text-neutral-500">
-              {r.matchExplanation.map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
-            </ul>
-          </Link>
-        ))}
-        {results && results.length === 0 && (
-          <p className="text-sm text-neutral-500">No matching rides yet — try a different time or fewer filters.</p>
+      {results !== null && (
+        <div className="mt-4 flex items-center justify-between text-sm">
+          <span className="text-ink-secondary">
+            {results.length} ride{results.length === 1 ? "" : "s"} found
+          </span>
+          <select
+            className="bg-transparent font-semibold text-primary outline-none"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                Sort: {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-col gap-3">
+        {loading && (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        )}
+
+        {!loading &&
+          results?.map((r) => (
+            <Link key={r.id} href={`/rides/${r.id}`} className="rounded-card bg-white p-3.5 shadow-card transition-colors hover:bg-neutral-50">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 shrink-0 rounded-full bg-neutral-200" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-ink">{r.driver.firstName}</p>
+                  <TrustCluster verificationLevel={r.driver.verificationLevel} rating={r.driver.rating} completedRidesCount={r.driver.completedRidesCount} size="sm" />
+                </div>
+                <p className="shrink-0 text-base font-extrabold text-primary">{r.pricePerSeat} TND</p>
+              </div>
+              <p className="mt-2 text-xs text-ink-secondary">
+                {new Date(r.departureAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {r.vehicle.color} {r.vehicle.make} {r.vehicle.model} · {r.seatsAvailable} seat{r.seatsAvailable === 1 ? "" : "s"} left
+              </p>
+            </Link>
+          ))}
+
+        {!loading && results && results.length === 0 && (
+          <EmptyState
+            message="No rides match yet."
+            action={
+              <button onClick={() => setShowMoreFilters(false)} className="underline">
+                Widen your time window →
+              </button>
+            }
+          />
         )}
       </div>
     </main>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<main className="mx-auto max-w-md px-4 py-6 text-sm text-ink-secondary">Loading…</main>}>
+      <SearchPageInner />
+    </Suspense>
   );
 }

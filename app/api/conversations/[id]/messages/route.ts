@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       where: { id: params.id },
       include: {
         ride: { select: { originLabel: true, destinationLabel: true, departureAt: true } },
-        participants: { include: { user: { select: { id: true, firstName: true } } } },
+        participants: { include: { user: { select: { id: true, firstName: true, verificationLevel: true } } } },
       },
     }),
   ]);
@@ -42,8 +42,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       ? {
           ride: conversation.ride,
           otherParticipants: conversation.participants
-            .map((p: (typeof conversation.participants)[number]) => p.user)
-            .filter((u: { id: string; firstName: string }) => u.id !== user.id),
+            .map((p) => p.user)
+            .filter((u) => u.id !== user.id),
         }
       : null,
   });

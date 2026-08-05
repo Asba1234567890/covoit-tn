@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import EmptyState from "@/components/EmptyState";
+import { buttonClasses } from "@/lib/ui";
 
 interface AdminReviewRow {
   id: string;
@@ -27,25 +29,25 @@ export default function AdminReviewsPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-lg font-semibold">Reviews to moderate</h1>
+      <h1 className="mb-4 font-display text-lg font-bold text-ink">Reviews to moderate</h1>
       <div className="flex flex-col gap-2">
         {reviews.map((r) => (
-          <div key={r.id} className="rounded-xl border bg-white p-4">
-            <p className="font-medium">
-              {r.author.firstName} → {r.subject.firstName} · {"⭐".repeat(r.stars)}
+          <div key={r.id} className="rounded-card bg-white p-4 shadow-card">
+            <p className="font-semibold text-ink">
+              {r.author.firstName} → {r.subject.firstName} · <span className="text-accent-dark">{"★".repeat(r.stars)}</span>
             </p>
-            {r.comment && <p className="mt-1 text-sm text-neutral-700">{r.comment}</p>}
+            {r.comment && <p className="mt-1 text-sm text-ink-secondary">{r.comment}</p>}
             <div className="mt-2 flex gap-1">
-              <button className="rounded-lg border px-2 py-1 text-xs" onClick={() => moderate(r.id, "APPROVED")}>
+              <button className={buttonClasses("secondary", "px-2 py-1 text-xs")} onClick={() => moderate(r.id, "APPROVED")}>
                 Approve
               </button>
-              <button className="rounded-lg border border-red-300 px-2 py-1 text-xs text-red-700" onClick={() => moderate(r.id, "REJECTED")}>
+              <button className={buttonClasses("destructive", "px-2 py-1 text-xs")} onClick={() => moderate(r.id, "REJECTED")}>
                 Reject
               </button>
             </div>
           </div>
         ))}
-        {reviews.length === 0 && <p className="text-sm text-neutral-500">Nothing pending review.</p>}
+        {reviews.length === 0 && <EmptyState message="Nothing pending review." />}
       </div>
     </div>
   );

@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import StatusBadge, { type StatusTone } from "@/components/StatusBadge";
+import EmptyState from "@/components/EmptyState";
+import { buttonClasses } from "@/lib/ui";
 
 interface AdminVerificationRow {
   id: string;
@@ -12,6 +15,11 @@ interface AdminVerificationRow {
 }
 
 const STATUSES = ["PENDING", "APPROVED", "REJECTED"];
+const STATUS_TONE: Record<string, StatusTone> = {
+  PENDING: "pending",
+  APPROVED: "success",
+  REJECTED: "error",
+};
 
 export default function AdminVerificationsPage() {
   const [rows, setRows] = useState<AdminVerificationRow[]>([]);
@@ -66,12 +74,14 @@ export default function AdminVerificationsPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-lg font-semibold">Verification documents</h1>
+      <h1 className="mb-4 font-display text-lg font-bold text-ink">Driver verification queue</h1>
       <div className="mb-4 flex gap-1">
         {STATUSES.map((s) => (
           <button
             key={s}
-            className={`rounded-lg border px-3 py-1 text-xs ${status === s ? "bg-black text-white" : ""}`}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+              status === s ? "bg-primary text-white" : "border border-neutral-200 text-ink-secondary"
+            }`}
             onClick={() => setStatus(s)}
           >
             {s}
@@ -81,44 +91,39 @@ export default function AdminVerificationsPage() {
 
       <div className="flex flex-col gap-2">
         {rows.map((r) => (
-          <div key={r.id} className="rounded-xl border bg-white p-4">
-            <div className="flex items-center justify-between">
-              <p className="font-medium">
-                {r.type} <span className="text-xs text-neutral-500">— {r.user.firstName} ({r.user.phone})</span>
+          <div key={r.id} className="rounded-card bg-white p-4 shadow-card">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold text-ink">
+                {r.type} <span className="text-xs font-normal text-ink-secondary">— {r.user.firstName} ({r.user.phone})</span>
               </p>
-              <span className="text-xs text-neutral-500">{new Date(r.submittedAt).toLocaleDateString()}</span>
+              <span className="shrink-0 text-xs text-ink-secondary">{new Date(r.submittedAt).toLocaleDateString()}</span>
             </div>
-            <p className="mt-1 text-xs text-neutral-500">Current level: {r.user.verificationLevel}</p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-xs text-ink-secondary">Current level: {r.user.verificationLevel}</span>
+              <StatusBadge label={r.status} tone={STATUS_TONE[r.status] ?? "neutral"} />
+            </div>
             {r.status === "REJECTED" && r.rejectionReason && (
-              <p className="mt-1 text-xs text-red-700">Rejected: {r.rejectionReason}</p>
+              <p className="mt-1 text-xs text-error-dark">Rejected: {r.rejectionReason}</p>
             )}
             <div className="mt-2 flex flex-wrap gap-1">
-              <button className="rounded-lg border px-2 py-1 text-xs" onClick={() => viewDocument(r.id)}>
+              <button className={buttonClasses("secondary", "px-2 py-1 text-xs")} onClick={() => viewDocument(r.id)}>
                 View document
               </button>
               {r.status === "PENDING" && (
                 <>
-                  <button
-                    className="rounded-lg border px-2 py-1 text-xs disabled:opacity-50"
-                    disabled={busy === r.id}
-                    onClick={() => approve(r.id)}
-                  >
+                  <button className={buttonClasses("secondary", "px-2 py-1 text-xs")} disabled={busy === r.id} onClick={() => approve(r.id)}>
                     Approve
                   </button>
-                  <button
-                    className="rounded-lg border border-red-300 px-2 py-1 text-xs text-red-700 disabled:opacity-50"
-                    disabled={busy === r.id}
-                    onClick={() => reject(r.id)}
-                  >
+                  <button className={buttonClasses("destructive", "px-2 py-1 text-xs")} disabled={busy === r.id} onClick={() => reject(r.id)}>
                     Reject
                   </button>
                 </>
               )}
             </div>
-            {docUrls[r.id] && <p className="mt-1 text-[10px] text-neutral-400">Link expires in 5 minutes.</p>}
+            {docUrls[r.id] && <p className="mt-1 text-[10px] text-ink-secondary/70">Link expires in 5 minutes.</p>}
           </div>
         ))}
-        {rows.length === 0 && <p className="text-sm text-neutral-500">No documents in this status.</p>}
+        {rows.length === 0 && <EmptyState message="No documents in this status." />}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchCurrentUser } from "@/lib/currentUserCache";
 
 export interface CurrentUser {
   id: string;
@@ -23,15 +24,13 @@ export function useRequireAuth(): CurrentUser | undefined {
   const [user, setUser] = useState<CurrentUser | undefined>(undefined);
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => {
-        if (!d.user) {
-          window.location.href = "/signup";
-          return;
-        }
-        setUser(d.user);
-      });
+    fetchCurrentUser().then((d) => {
+      if (!d.user) {
+        window.location.href = "/signup";
+        return;
+      }
+      setUser(d.user);
+    });
   }, []);
 
   return user;

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useRequireAuth } from "@/lib/useRequireAuth";
+import VerificationBadge from "@/components/VerificationBadge";
+import { buttonClasses } from "@/lib/ui";
 
 interface Message {
   id: string;
@@ -15,7 +17,7 @@ interface Message {
 
 interface ConversationInfo {
   ride: { originLabel: string; destinationLabel: string; departureAt: string };
-  otherParticipants: { id: string; firstName: string }[];
+  otherParticipants: { id: string; firstName: string; verificationLevel: number }[];
 }
 
 const POLL_MS = 4000;
@@ -76,13 +78,13 @@ export default function ConversationThreadPage() {
   }
 
   if (!currentUser) {
-    return <p className="px-4 py-6 text-sm text-neutral-500">Loading…</p>;
+    return <p className="px-4 py-6 text-sm text-ink-secondary">Loading…</p>;
   }
 
   if (error) {
     return (
       <main className="mx-auto max-w-md px-4 py-6">
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-error-dark">{error}</p>
         <Link href="/messages" className="mt-2 inline-block text-sm underline">
           Back to messages
         </Link>
@@ -90,49 +92,66 @@ export default function ConversationThreadPage() {
     );
   }
 
+  const other = info?.otherParticipants[0];
+
   return (
-    <main className="mx-auto flex h-[calc(100vh-57px)] max-w-md flex-col px-4 py-4">
-      <div className="mb-2 border-b pb-2">
-        <Link href="/messages" className="text-xs text-neutral-500 underline">
+    // 57px accounts for the top bar; the extra 64px on mobile matches the
+    // parent layout's pb-16 reserved for the fixed bottom tab bar (Nav.tsx),
+    // which sm:hidden removes above the sm breakpoint.
+    <main className="mx-auto flex h-[calc(100vh-57px-64px)] max-w-md flex-col sm:h-[calc(100vh-57px)]">
+      {/* Ride context stays pinned above the thread, never buried (spec §8). */}
+      <div className="border-b border-neutral-200 px-4 py-2.5">
+        <Link href="/messages" className="text-xs text-ink-secondary underline">
           ← All conversations
         </Link>
+        {info && other && (
+          <div className="mt-1 flex items-center gap-2">
+            <p className="font-semibold text-ink">{other.firstName}</p>
+            <VerificationBadge verificationLevel={other.verificationLevel} />
+          </div>
+        )}
         {info && (
-          <>
-            <p className="font-medium">{info.otherParticipants.map((p) => p.firstName).join(", ")}</p>
-            <p className="text-xs text-neutral-500">
-              {info.ride.originLabel} → {info.ride.destinationLabel} ·{" "}
-              {new Date(info.ride.departureAt).toLocaleDateString()}
-            </p>
-          </>
+          <p className="text-xs text-ink-secondary">
+            {info.ride.originLabel} → {info.ride.destinationLabel} · {new Date(info.ride.departureAt).toLocaleDateString()}
+          </p>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="flex flex-col gap-2 py-2">
+      <div className="bg-accent/10 px-4 py-1.5 text-center text-xs font-medium text-accent-dark">
+        Never pay or share personal contact outside Covoit
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4">
+        <div className="flex flex-col gap-2 py-3">
           {messages.map((m) => {
             const mine = m.senderId === currentUser.id;
             return (
-              <div key={m.id} className={`max-w-[75%] rounded-xl px-3 py-2 text-sm ${mine ? "self-end bg-black text-white" : "self-start bg-neutral-100"}`}>
-                {!mine && <p className="text-[10px] font-medium opacity-70">{m.sender.firstName}</p>}
+              <div
+                key={m.id}
+                className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${
+                  mine ? "self-end rounded-br-sm bg-primary text-white" : "self-start rounded-bl-sm bg-neutral-100 text-ink"
+                }`}
+              >
+                {!mine && <p className="text-[10px] font-semibold opacity-70">{m.sender.firstName}</p>}
                 <p>{m.body}</p>
               </div>
             );
           })}
-          {messages.length === 0 && <p className="text-sm text-neutral-500">No messages yet — say hello.</p>}
+          {messages.length === 0 && <p className="text-sm text-ink-secondary">No messages yet — say hello.</p>}
           <div ref={bottomRef} />
         </div>
       </div>
 
-      <div className="mt-2 flex gap-2 border-t pt-2">
+      <div className="flex gap-2 border-t border-neutral-200 px-4 py-2.5">
         <input
-          className="flex-1 rounded-lg border px-3 py-2 text-sm"
-          placeholder="Type a message…"
+          className="flex-1 rounded-control border border-neutral-200 px-3 py-2 text-sm"
+          placeholder="Message…"
           value={text}
           maxLength={2000}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
         />
-        <button className="rounded-lg bg-black px-4 py-2 text-sm text-white disabled:opacity-50" disabled={sending || !text.trim()} onClick={send}>
+        <button className={buttonClasses("primary", "px-4 py-2")} disabled={sending || !text.trim()} onClick={send}>
           Send
         </button>
       </div>

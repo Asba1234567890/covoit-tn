@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRequireAuth } from "@/lib/useRequireAuth";
+import { buttonClasses } from "@/lib/ui";
 
 interface Profile {
   id: string;
@@ -89,60 +91,83 @@ export default function ProfilePage() {
     }
   }
 
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/";
+  }
+
   if (!currentUser || !profile) {
-    return <p className="px-4 py-6 text-sm text-neutral-500">Loading…</p>;
+    return <p className="px-4 py-6 text-sm text-ink-secondary">Loading…</p>;
   }
 
   return (
     <main className="mx-auto max-w-md px-4 py-6">
-      <h1 className="mb-4 text-xl font-semibold">Your profile</h1>
-
-      <section className="mb-4 flex items-center gap-3 rounded-xl border p-4">
+      <section className="rounded-card bg-white p-5 text-center shadow-card">
         {profile.profilePhotoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={profile.profilePhotoUrl} alt="" className="h-14 w-14 rounded-full object-cover" />
+          <img src={profile.profilePhotoUrl} alt="" width={56} height={56} loading="lazy" className="mx-auto h-14 w-14 rounded-full object-cover" />
         ) : (
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-neutral-200 text-lg font-semibold">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-neutral-200 text-lg font-semibold text-ink-secondary">
             {profile.firstName[0]?.toUpperCase()}
           </div>
         )}
-        <div>
-          <p className="font-medium">{profile.firstName}</p>
-          <p className="text-xs text-neutral-500">{profile.phone}</p>
-          <p className="text-xs text-neutral-500">Member since {new Date(profile.memberSince).toLocaleDateString()}</p>
-        </div>
+        <p className="mt-2 font-display font-bold text-ink">{profile.firstName}</p>
+        <p className="text-xs text-ink-secondary">{profile.phone}</p>
+        <p className="text-xs text-ink-secondary">Member since {new Date(profile.memberSince).toLocaleDateString()}</p>
       </section>
 
-      <section className="mb-4 grid grid-cols-2 gap-3">
-        <div className="rounded-xl border p-3">
-          <p className="text-xs text-neutral-500">As driver</p>
+      <section className="mt-3 grid grid-cols-2 gap-3">
+        <div className="rounded-card bg-white p-3 shadow-card">
+          <p className="text-xs text-ink-secondary">As driver</p>
           {profile.isDriver ? (
-            <p className="text-sm font-medium">
-              ⭐ {profile.driverRating?.toFixed(1) ?? "New"} · {profile.driverCompletedRides ?? 0} rides
+            <p className="text-sm font-semibold text-ink">
+              ★ {profile.driverRating?.toFixed(1) ?? "New"} · {profile.driverCompletedRides ?? 0} rides
             </p>
           ) : (
-            <p className="text-sm text-neutral-500">Not a driver yet</p>
+            <p className="text-sm text-ink-secondary">Not a driver yet</p>
           )}
         </div>
-        <div className="rounded-xl border p-3">
-          <p className="text-xs text-neutral-500">As passenger</p>
-          <p className="text-sm font-medium">{profile.passengerCompletedRides} rides completed</p>
+        <div className="rounded-card bg-white p-3 shadow-card">
+          <p className="text-xs text-ink-secondary">As passenger</p>
+          <p className="text-sm font-semibold text-ink">{profile.passengerCompletedRides} rides completed</p>
         </div>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-xl border p-4">
+      {/* Secondary navigation — moved here from the top nav so that bar can
+          stay slim (design spec §9 "User profile" menu pattern). */}
+      <section className="mt-3 divide-y divide-neutral-100 rounded-card bg-white shadow-card">
+        {profile.isDriver && (
+          <Link href="/my-rides" className="block px-4 py-3 text-sm text-ink hover:bg-neutral-50">
+            My rides
+          </Link>
+        )}
+        {profile.isDriver && (
+          <Link href="/vehicles" className="block px-4 py-3 text-sm text-ink hover:bg-neutral-50">
+            Vehicles
+          </Link>
+        )}
+        <Link href="/verification" className="block px-4 py-3 text-sm text-ink hover:bg-neutral-50">
+          Verification &amp; documents
+        </Link>
+        <button onClick={logout} className="block w-full px-4 py-3 text-left text-sm text-ink-secondary hover:bg-neutral-50">
+          Log out
+        </button>
+      </section>
+
+      <section className="mt-3 flex flex-col gap-3 rounded-card bg-white p-4 shadow-card">
+        <p className="text-sm font-semibold text-ink">Edit profile</p>
         <div>
-          <label className="text-sm text-neutral-600">First name</label>
+          <label className="text-sm text-ink-secondary">First name</label>
           <input
-            className="mt-1 w-full rounded-lg border px-3 py-2"
+            className="mt-1 w-full rounded-control border border-neutral-200 px-3 py-2 text-sm"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
           />
         </div>
         <div>
-          <label className="text-sm text-neutral-600">Bio</label>
+          <label className="text-sm text-ink-secondary">Bio</label>
           <textarea
-            className="mt-1 w-full rounded-lg border px-3 py-2"
+            className="mt-1 w-full rounded-control border border-neutral-200 px-3 py-2 text-sm"
             rows={3}
             maxLength={500}
             value={bio}
@@ -150,11 +175,11 @@ export default function ProfilePage() {
           />
         </div>
         <div>
-          <label className="text-sm text-neutral-600">Profile photo</label>
+          <label className="text-sm text-ink-secondary">Profile photo</label>
           <div className="mt-1 flex items-center gap-3">
             {profilePhotoUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={profilePhotoUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+              <img src={profilePhotoUrl} alt="" width={40} height={40} loading="lazy" className="h-10 w-10 rounded-full object-cover" />
             )}
             <input
               type="file"
@@ -167,16 +192,18 @@ export default function ProfilePage() {
               className="text-sm"
             />
           </div>
-          {uploading && <p className="mt-1 text-xs text-neutral-500">Uploading…</p>}
+          {uploading && <p className="mt-1 text-xs text-ink-secondary">Uploading…</p>}
         </div>
         <div>
-          <label className="text-sm text-neutral-600">Languages</label>
+          <label className="text-sm text-ink-secondary">Languages</label>
           <div className="mt-1 flex gap-2">
             {LANGUAGE_OPTIONS.map((l) => (
               <button
                 key={l}
                 type="button"
-                className={`rounded-lg border px-3 py-1 text-sm ${languages.includes(l) ? "bg-black text-white" : ""}`}
+                className={`rounded-control border px-3 py-1 text-sm ${
+                  languages.includes(l) ? "border-primary bg-primary text-white" : "border-neutral-200 text-ink"
+                }`}
                 onClick={() => toggleLanguage(l)}
               >
                 {l}
@@ -185,14 +212,10 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <button
-          className="rounded-lg bg-black py-2 text-white disabled:opacity-50"
-          disabled={saving || !firstName.trim()}
-          onClick={save}
-        >
+        <button className={buttonClasses("primary")} disabled={saving || !firstName.trim()} onClick={save}>
           {saving ? "Saving…" : "Save changes"}
         </button>
-        {message && <p className="text-sm text-neutral-600">{message}</p>}
+        {message && <p className="text-sm text-ink-secondary">{message}</p>}
       </section>
     </main>
   );

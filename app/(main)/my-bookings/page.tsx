@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import ReportForm from "@/components/ReportForm";
+import StatusBadge, { type StatusTone } from "@/components/StatusBadge";
+import EmptyState from "@/components/EmptyState";
+import { buttonClasses } from "@/lib/ui";
 
 interface Booking {
   id: string;
@@ -31,6 +34,17 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED_BY_PASSENGER: "Cancelled",
 };
 
+// Distinct, honest visual per async state — spec §1 "Booking feedback":
+// pending shouldn't read as broken, and each state gets its own color.
+const STATUS_TONE: Record<string, StatusTone> = {
+  PENDING: "pending",
+  ACCEPTED: "success",
+  DECLINED: "error",
+  COMPLETED: "success",
+  CANCELLED_BY_DRIVER: "neutral",
+  CANCELLED_BY_PASSENGER: "neutral",
+};
+
 function ReviewForm({ bookingId, onDone }: { bookingId: string; onDone: () => void }) {
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState("");
@@ -56,28 +70,24 @@ function ReviewForm({ bookingId, onDone }: { bookingId: string; onDone: () => vo
   }
 
   return (
-    <div className="mt-2 rounded-lg bg-neutral-50 p-3">
-      <p className="mb-1 text-xs font-medium">Rate your driver</p>
+    <div className="mt-2 rounded-control bg-neutral-50 p-3">
+      <p className="mb-1 text-xs font-medium text-ink">Rate your driver</p>
       <div className="flex gap-1 text-lg">
         {[1, 2, 3, 4, 5].map((s) => (
-          <button key={s} type="button" onClick={() => setStars(s)} className={s <= stars ? "text-amber-500" : "text-neutral-300"}>
+          <button key={s} type="button" onClick={() => setStars(s)} className={s <= stars ? "text-accent" : "text-neutral-300"}>
             ★
           </button>
         ))}
       </div>
       <textarea
-        className="mt-2 w-full rounded-lg border px-2 py-1 text-sm"
+        className="mt-2 w-full rounded-control border border-neutral-200 px-2 py-1 text-sm"
         rows={2}
         placeholder="Comment (optional)"
         value={comment}
         onChange={(e) => setComment(e.target.value)}
       />
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      <button
-        className="mt-2 rounded-lg bg-black px-3 py-1.5 text-xs text-white disabled:opacity-50"
-        disabled={submitting}
-        onClick={submit}
-      >
+      {error && <p className="text-xs text-error-dark">{error}</p>}
+      <button className={buttonClasses("primary", "mt-2 px-3 py-1.5 text-xs")} disabled={submitting} onClick={submit}>
         {submitting ? "Submitting…" : "Submit review"}
       </button>
     </div>
@@ -117,50 +127,44 @@ export default function MyBookingsPage() {
   }
 
   if (!currentUser) {
-    return <p className="px-4 py-6 text-sm text-neutral-500">Loading…</p>;
+    return <p className="px-4 py-6 text-sm text-ink-secondary">Loading…</p>;
   }
 
   return (
     <main className="mx-auto max-w-md px-4 py-6">
-      <h1 className="mb-4 text-xl font-semibold">My bookings</h1>
+      <h1 className="mb-4 font-display text-lg font-bold text-ink">My bookings</h1>
 
       <div className="flex flex-col gap-3">
         {bookings.map((b) => (
-          <div key={b.id} className="rounded-xl border p-4">
-            <div className="flex items-center justify-between">
-              <Link href={`/rides/${b.ride.id}`} className="font-medium hover:underline">
+          <div key={b.id} className="rounded-card bg-white p-4 shadow-card">
+            <div className="flex items-center justify-between gap-2">
+              <Link href={`/rides/${b.ride.id}`} className="font-semibold text-ink hover:underline">
                 {b.ride.originLabel} → {b.ride.destinationLabel}
               </Link>
-              <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs">{STATUS_LABEL[b.status] ?? b.status}</span>
+              <StatusBadge label={STATUS_LABEL[b.status] ?? b.status} tone={STATUS_TONE[b.status] ?? "neutral"} />
             </div>
-            <p className="text-sm text-neutral-600">
+            <p className="mt-1 text-sm text-ink-secondary">
               {new Date(b.ride.departureAt).toLocaleString()} · with {b.ride.driver.firstName}
             </p>
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-ink-secondary">
               {b.seatsBooked} seat(s) · {b.ride.pricePerSeat} TND/seat
             </p>
 
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
               {["PENDING", "ACCEPTED"].includes(b.status) && (
-                <button
-                  className="rounded-lg border border-red-300 px-2 py-1 text-red-700 disabled:opacity-50"
-                  disabled={busy === b.id}
-                  onClick={() => cancel(b.id)}
-                >
+                <button className={buttonClasses("destructive", "px-2.5 py-1.5 text-xs")} disabled={busy === b.id} onClick={() => cancel(b.id)}>
                   Cancel booking
                 </button>
               )}
-              <Link href={`/messages?rideId=${b.ride.id}`} className="rounded-lg border px-2 py-1">
+              <Link href={`/messages?rideId=${b.ride.id}`} className={buttonClasses("secondary", "px-2.5 py-1.5 text-xs")}>
                 Message driver
               </Link>
               {b.status === "COMPLETED" && !b.hasReviewed && reviewingId !== b.id && (
-                <button className="rounded-lg border px-2 py-1" onClick={() => setReviewingId(b.id)}>
+                <button className={buttonClasses("secondary", "px-2.5 py-1.5 text-xs")} onClick={() => setReviewingId(b.id)}>
                   Leave a review
                 </button>
               )}
-              {b.status === "COMPLETED" && b.hasReviewed && (
-                <span className="rounded-lg bg-green-50 px-2 py-1 text-green-700">Reviewed</span>
-              )}
+              {b.status === "COMPLETED" && b.hasReviewed && <StatusBadge label="Reviewed" tone="success" />}
             </div>
 
             {reviewingId === b.id && (
@@ -178,7 +182,7 @@ export default function MyBookingsPage() {
             </div>
           </div>
         ))}
-        {bookings.length === 0 && <p className="text-sm text-neutral-500">No bookings yet. Go find a ride!</p>}
+        {bookings.length === 0 && <EmptyState message="No bookings yet. Go find a ride!" />}
       </div>
     </main>
   );

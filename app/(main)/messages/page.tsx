@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useRequireAuth } from "@/lib/useRequireAuth";
+import EmptyState from "@/components/EmptyState";
 
 interface ConversationRow {
   id: string;
@@ -14,7 +15,7 @@ interface ConversationRow {
 
 export default function MessagesPage() {
   return (
-    <Suspense fallback={<p className="px-4 py-6 text-sm text-neutral-500">Loading…</p>}>
+    <Suspense fallback={<p className="px-4 py-6 text-sm text-ink-secondary">Loading…</p>}>
       <MessagesPageInner />
     </Suspense>
   );
@@ -54,36 +55,41 @@ function MessagesPageInner() {
   }, [currentUser, rideId, passengerId, router]);
 
   if (!currentUser || (rideId && !error)) {
-    return <p className="px-4 py-6 text-sm text-neutral-500">Loading…</p>;
+    return <p className="px-4 py-6 text-sm text-ink-secondary">Loading…</p>;
   }
 
   return (
     <main className="mx-auto max-w-md px-4 py-6">
-      <h1 className="mb-4 text-xl font-semibold">Messages</h1>
-      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      <h1 className="mb-4 font-display text-lg font-bold text-ink">Messages</h1>
+      {error && <p className="mb-3 text-sm text-error-dark">{error}</p>}
 
       <div className="flex flex-col gap-2">
         {(conversations ?? []).map((c) => {
           const other = c.participants.find((p) => p.user.id !== currentUser.id)?.user;
           const lastMessage = c.messages[0];
           return (
-            <Link key={c.id} href={`/messages/${c.id}`} className="rounded-xl border p-4 hover:bg-neutral-50">
-              <div className="flex items-center justify-between">
-                <p className="font-medium">{other?.firstName ?? "Conversation"}</p>
-                <span className="text-xs text-neutral-500">
-                  {c.ride.originLabel} → {c.ride.destinationLabel}
-                </span>
+            <Link key={c.id} href={`/messages/${c.id}`} className="rounded-card bg-white p-3.5 shadow-card transition-colors hover:bg-neutral-50">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-neutral-200" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate font-semibold text-ink">{other?.firstName ?? "Conversation"}</p>
+                    <span className="shrink-0 text-xs text-ink-secondary">
+                      {c.ride.originLabel} → {c.ride.destinationLabel}
+                    </span>
+                  </div>
+                  {lastMessage ? (
+                    <p className="truncate text-sm text-ink-secondary">{lastMessage.body}</p>
+                  ) : (
+                    <p className="text-sm text-ink-secondary/70">No messages yet</p>
+                  )}
+                </div>
               </div>
-              {lastMessage ? (
-                <p className="mt-1 truncate text-sm text-neutral-600">{lastMessage.body}</p>
-              ) : (
-                <p className="mt-1 text-sm text-neutral-400">No messages yet</p>
-              )}
             </Link>
           );
         })}
         {conversations && conversations.length === 0 && (
-          <p className="text-sm text-neutral-500">No conversations yet. Book a ride or accept a booking to start chatting.</p>
+          <EmptyState message="No conversations yet. Book a ride or accept a booking to start chatting." />
         )}
       </div>
     </main>

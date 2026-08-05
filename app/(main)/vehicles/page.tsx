@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRequireAuth } from "@/lib/useRequireAuth";
+import { buttonClasses } from "@/lib/ui";
+import EmptyState from "@/components/EmptyState";
 
 interface Vehicle {
   id: string;
@@ -158,7 +160,7 @@ export default function VehiclesPage() {
   }
 
   if (!currentUser) {
-    return <p className="px-4 py-6 text-sm text-neutral-500">Loading…</p>;
+    return <p className="px-4 py-6 text-sm text-ink-secondary">Loading…</p>;
   }
 
   const formValid = form.make && form.model && form.color && form.licensePlate && form.seatsTotal;
@@ -166,32 +168,32 @@ export default function VehiclesPage() {
   return (
     <main className="mx-auto max-w-md px-4 py-6">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Your vehicles</h1>
+        <h1 className="font-display text-lg font-bold text-ink">Your vehicles</h1>
         {!showAdd && !editingId && (
-          <button className="text-sm underline" onClick={() => setShowAdd(true)}>
+          <button className="text-sm font-semibold text-primary" onClick={() => setShowAdd(true)}>
             + Add vehicle
           </button>
         )}
       </div>
 
       {(showAdd || editingId) && (
-        <section className="mb-4 flex flex-col gap-2 rounded-xl border p-4">
-          <input className="rounded-lg border px-3 py-2" placeholder="Make (e.g. Renault)" value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} />
-          <input className="rounded-lg border px-3 py-2" placeholder="Model (e.g. Clio)" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
-          <input className="rounded-lg border px-3 py-2" placeholder="Year" type="number" value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} />
-          <input className="rounded-lg border px-3 py-2" placeholder="Color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
-          <input className="rounded-lg border px-3 py-2" placeholder="License plate" value={form.licensePlate} onChange={(e) => setForm({ ...form, licensePlate: e.target.value })} />
-          <input className="rounded-lg border px-3 py-2" placeholder="Total seats" type="number" min={1} max={8} value={form.seatsTotal} onChange={(e) => setForm({ ...form, seatsTotal: Number(e.target.value) })} />
-          {error && <p className="text-sm text-red-600">{error}</p>}
+        <section className="mb-4 flex flex-col gap-2 rounded-card bg-white p-4 shadow-card">
+          <input className="rounded-control border border-neutral-200 px-3 py-2 text-sm" placeholder="Make (e.g. Renault)" value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} />
+          <input className="rounded-control border border-neutral-200 px-3 py-2 text-sm" placeholder="Model (e.g. Clio)" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
+          <input className="rounded-control border border-neutral-200 px-3 py-2 text-sm" placeholder="Year" type="number" value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} />
+          <input className="rounded-control border border-neutral-200 px-3 py-2 text-sm" placeholder="Color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
+          <input className="rounded-control border border-neutral-200 px-3 py-2 text-sm" placeholder="License plate" value={form.licensePlate} onChange={(e) => setForm({ ...form, licensePlate: e.target.value })} />
+          <input className="rounded-control border border-neutral-200 px-3 py-2 text-sm" placeholder="Total seats" type="number" min={1} max={8} value={form.seatsTotal} onChange={(e) => setForm({ ...form, seatsTotal: Number(e.target.value) })} />
+          {error && <p className="text-sm text-error-dark">{error}</p>}
           <div className="flex gap-2">
             <button
-              className="flex-1 rounded-lg bg-black py-2 text-white disabled:opacity-50"
+              className={buttonClasses("primary", "flex-1")}
               disabled={!formValid || busy}
               onClick={editingId ? submitEdit : submitAdd}
             >
               {editingId ? "Save changes" : "Register vehicle"}
             </button>
-            <button className="rounded-lg border px-3 py-2" onClick={resetForm}>
+            <button className={buttonClasses("secondary")} onClick={resetForm}>
               Cancel
             </button>
           </div>
@@ -200,15 +202,15 @@ export default function VehiclesPage() {
 
       <div className="flex flex-col gap-3">
         {vehicles.map((v) => (
-          <div key={v.id} className="rounded-xl border p-4">
+          <div key={v.id} className="rounded-card bg-white p-4 shadow-card">
             <div className="flex items-start justify-between">
               <div>
                 <p className="font-medium">
                   {v.color} {v.make} {v.model} {v.year ? `(${v.year})` : ""}
                 </p>
-                <p className="text-sm text-neutral-600">{v.licensePlate} · {v.seatsTotal} seats</p>
-                <p className="mt-1 text-xs text-neutral-500">
-                  {v.isDefault && <span className="mr-2 rounded-full bg-green-100 px-2 py-0.5 text-green-800">Default</span>}
+                <p className="text-sm text-ink-secondary">{v.licensePlate} · {v.seatsTotal} seats</p>
+                <p className="mt-1 text-xs text-ink-secondary">
+                  {v.isDefault && <span className="mr-2 rounded-full bg-success/15 px-2 py-0.5 text-success-dark">Default</span>}
                   Verification: {v.verificationStatus}
                 </p>
               </div>
@@ -219,9 +221,9 @@ export default function VehiclesPage() {
                 {v.photoUrls.map((url) => (
                   <div key={url} className="group relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                    <img src={url} alt="" width={64} height={64} loading="lazy" className="h-16 w-16 rounded-control object-cover" />
                     <button
-                      className="absolute -right-1 -top-1 rounded-full bg-black px-1.5 text-xs text-white"
+                      className="absolute -right-1 -top-1 rounded-full bg-ink px-1.5 text-xs text-white"
                       onClick={() => removePhoto(v, url)}
                       disabled={uploadingId === v.id}
                     >
@@ -234,17 +236,17 @@ export default function VehiclesPage() {
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
               {!v.isDefault && (
-                <button className="rounded-lg border px-2 py-1" onClick={() => makeDefault(v.id)} disabled={busy}>
+                <button className={buttonClasses("secondary", "px-2 py-1 text-xs")} onClick={() => makeDefault(v.id)} disabled={busy}>
                   Set as default
                 </button>
               )}
-              <button className="rounded-lg border px-2 py-1" onClick={() => startEdit(v)} disabled={busy}>
+              <button className={buttonClasses("secondary", "px-2 py-1 text-xs")} onClick={() => startEdit(v)} disabled={busy}>
                 Edit
               </button>
-              <button className="rounded-lg border border-red-300 px-2 py-1 text-red-700" onClick={() => remove(v.id)} disabled={busy}>
+              <button className={buttonClasses("destructive", "px-2 py-1 text-xs")} onClick={() => remove(v.id)} disabled={busy}>
                 Delete
               </button>
-              <label className="cursor-pointer rounded-lg border px-2 py-1">
+              <label className={buttonClasses("secondary", "cursor-pointer px-2 py-1 text-xs")}>
                 {uploadingId === v.id ? "Uploading…" : "+ Add photo"}
                 <input
                   type="file"
@@ -261,9 +263,7 @@ export default function VehiclesPage() {
             </div>
           </div>
         ))}
-        {vehicles.length === 0 && !showAdd && (
-          <p className="text-sm text-neutral-500">No vehicles registered yet.</p>
-        )}
+        {vehicles.length === 0 && !showAdd && <EmptyState message="No vehicles registered yet." />}
       </div>
     </main>
   );

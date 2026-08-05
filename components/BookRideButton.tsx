@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { buttonClasses } from "@/lib/ui";
 
 export default function BookRideButton({ rideId, seatsAvailable }: { rideId: string; seatsAvailable: number }) {
   const [seats, setSeats] = useState(1);
@@ -33,7 +34,7 @@ export default function BookRideButton({ rideId, seatsAvailable }: { rideId: str
 
   if (seatsAvailable === 0) {
     return (
-      <button className="w-full rounded-lg bg-black py-3 text-white opacity-50" disabled>
+      <button className={buttonClasses("primary", "w-full")} disabled>
         Fully booked
       </button>
     );
@@ -43,7 +44,7 @@ export default function BookRideButton({ rideId, seatsAvailable }: { rideId: str
     <div className="flex flex-col gap-2">
       {seatsAvailable > 1 && (
         <select
-          className="rounded-lg border px-3 py-2"
+          className="rounded-control border border-neutral-200 px-3 py-2 text-sm"
           value={seats}
           onChange={(e) => setSeats(Number(e.target.value))}
         >
@@ -54,14 +55,10 @@ export default function BookRideButton({ rideId, seatsAvailable }: { rideId: str
           ))}
         </select>
       )}
-      <button
-        className="w-full rounded-lg bg-black py-3 text-white disabled:opacity-50"
-        disabled={submitting}
-        onClick={book}
-      >
-        {submitting ? "Booking…" : "Book a seat"}
+      <button className={buttonClasses("primary", "w-full")} disabled={submitting} onClick={book}>
+        {submitting ? "Sending request…" : "Request to book"}
       </button>
-      {result && <p className="text-sm text-red-600">{result}</p>}
+      {result && <p className="rounded-control bg-error/8 px-3 py-2 text-sm text-error-dark">{result}</p>}
     </div>
   );
 }

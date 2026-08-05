@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import StatusBadge from "@/components/StatusBadge";
+import EmptyState from "@/components/EmptyState";
+import { buttonClasses } from "@/lib/ui";
 
 interface AdminUserRow {
   id: string;
@@ -31,6 +34,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function act(userId: string, action: string) {
@@ -40,63 +44,67 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-lg font-semibold">Users</h1>
+      <h1 className="mb-4 font-display text-lg font-bold text-ink">Users</h1>
       <div className="mb-4 flex gap-2">
         <input
-          className="flex-1 rounded-lg border px-3 py-2 text-sm"
+          className="flex-1 rounded-control border border-neutral-200 px-3 py-2 text-sm"
           placeholder="Search name or phone"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && load()}
         />
-        <button className="rounded-lg border px-3 py-2 text-sm" onClick={load} disabled={loading}>
+        <button className={buttonClasses("secondary", "px-3 py-2 text-sm")} onClick={load} disabled={loading}>
           Search
         </button>
       </div>
 
       <div className="flex flex-col gap-2">
         {users.map((u) => (
-          <div key={u.id} className="rounded-xl border bg-white p-4">
-            <div className="flex items-center justify-between">
+          <div key={u.id} className="rounded-card bg-white p-4 shadow-card">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="font-medium">
-                  {u.firstName} <span className="text-xs text-neutral-500">{u.phone}</span>
+                <p className="font-semibold text-ink">
+                  {u.firstName} <span className="text-xs font-normal text-ink-secondary">{u.phone}</span>
                 </p>
-                <p className="text-xs text-neutral-500">
-                  Verification level {u.verificationLevel}
-                  {u.driverProfile && ` · driver, ${u.driverProfile.rating.toFixed(1)}★, ${u.driverProfile.completedRidesCount} rides`}
-                  {u.suspendedAt && " · SUSPENDED"}
-                  {u.bannedAt && " · BANNED"}
-                </p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-secondary">
+                  <span>Verification level {u.verificationLevel}</span>
+                  {u.driverProfile && (
+                    <span>
+                      · driver, {u.driverProfile.rating.toFixed(1)}★, {u.driverProfile.completedRidesCount} rides
+                    </span>
+                  )}
+                  {u.suspendedAt && <StatusBadge label="Suspended" tone="pending" />}
+                  {u.bannedAt && <StatusBadge label="Banned" tone="error" />}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex shrink-0 flex-wrap gap-1">
                 {!u.suspendedAt && !u.bannedAt && (
-                  <button className="rounded-lg border px-2 py-1 text-xs" onClick={() => act(u.id, "suspend")}>
+                  <button className={buttonClasses("secondary", "px-2 py-1 text-xs")} onClick={() => act(u.id, "suspend")}>
                     Suspend
                   </button>
                 )}
                 {u.suspendedAt && (
-                  <button className="rounded-lg border px-2 py-1 text-xs" onClick={() => act(u.id, "unsuspend")}>
+                  <button className={buttonClasses("secondary", "px-2 py-1 text-xs")} onClick={() => act(u.id, "unsuspend")}>
                     Unsuspend
                   </button>
                 )}
                 {!u.bannedAt && (
-                  <button className="rounded-lg border border-red-300 px-2 py-1 text-xs text-red-700" onClick={() => act(u.id, "ban")}>
+                  <button className={buttonClasses("destructive", "px-2 py-1 text-xs")} onClick={() => act(u.id, "ban")}>
                     Ban
                   </button>
                 )}
                 {u.bannedAt && (
-                  <button className="rounded-lg border px-2 py-1 text-xs" onClick={() => act(u.id, "unban")}>
+                  <button className={buttonClasses("secondary", "px-2 py-1 text-xs")} onClick={() => act(u.id, "unban")}>
                     Unban
                   </button>
                 )}
                 {u.verificationLevel < 2 && (
-                  <button className="rounded-lg border px-2 py-1 text-xs" onClick={() => act(u.id, "verify_identity")}>
+                  <button className={buttonClasses("secondary", "px-2 py-1 text-xs")} onClick={() => act(u.id, "verify_identity")}>
                     Verify identity
                   </button>
                 )}
                 {u.driverProfile && u.verificationLevel < 3 && (
-                  <button className="rounded-lg border px-2 py-1 text-xs" onClick={() => act(u.id, "verify_driver")}>
+                  <button className={buttonClasses("secondary", "px-2 py-1 text-xs")} onClick={() => act(u.id, "verify_driver")}>
                     Verify driver
                   </button>
                 )}
@@ -104,7 +112,7 @@ export default function AdminUsersPage() {
             </div>
           </div>
         ))}
-        {users.length === 0 && !loading && <p className="text-sm text-neutral-500">No users found.</p>}
+        {users.length === 0 && !loading && <EmptyState message="No users found." />}
       </div>
     </div>
   );

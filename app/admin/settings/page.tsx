@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import EmptyState from "@/components/EmptyState";
+import { buttonClasses } from "@/lib/ui";
 
 interface Setting {
   id: string;
@@ -36,28 +38,28 @@ export default function AdminSettingsPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-lg font-semibold">Platform settings</h1>
-      <p className="mb-4 text-xs text-neutral-500">
+      <h1 className="mb-4 font-display text-lg font-bold text-ink">Platform settings</h1>
+      <p className="mb-4 text-xs text-ink-secondary">
         Values are stored as JSON — numbers, booleans, or strings depending on the setting. Only Super Admins can edit these.
       </p>
       <div className="flex flex-col gap-2">
         {settings.map((s) => (
-          <div key={s.id} className="rounded-xl border bg-white p-4">
-            <p className="text-sm font-medium">{s.key}</p>
-            <p className="text-xs text-neutral-500">{s.country ? s.country.name : "Global default"}</p>
+          <div key={s.id} className="rounded-card bg-white p-4 shadow-card">
+            <p className="text-sm font-semibold text-ink">{s.key}</p>
+            <p className="text-xs text-ink-secondary">{s.country ? s.country.name : "Global default"}</p>
             <div className="mt-2 flex gap-2">
               <input
-                className="flex-1 rounded-lg border px-3 py-2 text-sm"
+                className="flex-1 rounded-control border border-neutral-200 px-3 py-2 text-sm"
                 defaultValue={JSON.stringify(s.value)}
                 onChange={(e) => setEdits((prev) => ({ ...prev, [s.id]: e.target.value }))}
               />
-              <button className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50" disabled={saving === s.id} onClick={() => save(s)}>
+              <button className={buttonClasses("secondary", "px-3 py-2 text-sm")} disabled={saving === s.id} onClick={() => save(s)}>
                 Save
               </button>
             </div>
           </div>
         ))}
-        {settings.length === 0 && <p className="text-sm text-neutral-500">No settings found.</p>}
+        {settings.length === 0 && <EmptyState message="No settings found." />}
       </div>
     </div>
   );

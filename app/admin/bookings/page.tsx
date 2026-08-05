@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import StatusBadge, { type StatusTone } from "@/components/StatusBadge";
+import EmptyState from "@/components/EmptyState";
 
 interface AdminBookingRow {
   id: string;
@@ -13,6 +15,14 @@ interface AdminBookingRow {
 }
 
 const STATUS_FILTERS = ["", "PENDING", "ACCEPTED", "COMPLETED", "CANCELLED_BY_PASSENGER", "CANCELLED_BY_DRIVER", "NO_SHOW"];
+const STATUS_TONE: Record<string, StatusTone> = {
+  PENDING: "pending",
+  ACCEPTED: "success",
+  COMPLETED: "success",
+  CANCELLED_BY_PASSENGER: "neutral",
+  CANCELLED_BY_DRIVER: "neutral",
+  NO_SHOW: "error",
+};
 
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<AdminBookingRow[]>([]);
@@ -29,12 +39,14 @@ export default function AdminBookingsPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-lg font-semibold">Bookings</h1>
+      <h1 className="mb-4 font-display text-lg font-bold text-ink">Bookings</h1>
       <div className="mb-4 flex flex-wrap gap-1">
         {STATUS_FILTERS.map((s) => (
           <button
             key={s}
-            className={`rounded-lg border px-3 py-1 text-xs ${status === s ? "bg-black text-white" : ""}`}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
+              status === s ? "bg-primary text-white" : "border border-neutral-200 text-ink-secondary"
+            }`}
             onClick={() => setStatus(s)}
           >
             {s || "All"}
@@ -44,19 +56,20 @@ export default function AdminBookingsPage() {
 
       <div className="flex flex-col gap-2">
         {bookings.map((b) => (
-          <div key={b.id} className="rounded-xl border bg-white p-4">
-            <p className="font-medium">
-              {b.ride.originLabel} → {b.ride.destinationLabel}
-            </p>
-            <p className="text-xs text-neutral-500">
+          <div key={b.id} className="rounded-card bg-white p-4 shadow-card">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold text-ink">
+                {b.ride.originLabel} → {b.ride.destinationLabel}
+              </p>
+              <StatusBadge label={b.status} tone={STATUS_TONE[b.status] ?? "neutral"} />
+            </div>
+            <p className="mt-0.5 text-xs text-ink-secondary">
               {b.passenger.firstName} ({b.passenger.phone}) · {b.seatsBooked} seat(s) · {new Date(b.ride.departureAt).toLocaleString()}
             </p>
-            <p className="text-xs text-neutral-500">
-              status: {b.status} · payment: {b.payment ? `${b.payment.status} (${b.payment.amountGross} TND)` : "none"}
-            </p>
+            <p className="text-xs text-ink-secondary">payment: {b.payment ? `${b.payment.status} (${b.payment.amountGross} TND)` : "none"}</p>
           </div>
         ))}
-        {bookings.length === 0 && !loading && <p className="text-sm text-neutral-500">No bookings found.</p>}
+        {bookings.length === 0 && !loading && <EmptyState message="No bookings found." />}
       </div>
     </div>
   );

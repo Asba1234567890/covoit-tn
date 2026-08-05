@@ -6,7 +6,7 @@ export default function VerificationBadge({ verificationLevel }: { verificationL
   if (verificationLevel < 3) return null;
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+    <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-semibold text-accent-dark">
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
         <path
           fillRule="evenodd"
@@ -14,7 +14,7 @@ export default function VerificationBadge({ verificationLevel }: { verificationL
           clipRule="evenodd"
         />
       </svg>
-      Verified driver
+      Verified
     </span>
   );
 }

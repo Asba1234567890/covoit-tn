@@ -5,8 +5,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   return (
     <>
       <Nav />
-      <div className="min-h-[calc(100vh-57px)]">{children}</div>
-      <footer className="border-t px-4 py-4 text-center text-xs text-neutral-400">
+      {/* pb-16 reserves space for the fixed mobile bottom tab bar (sm:hidden in Nav) */}
+      <div className="min-h-[calc(100vh-57px)] pb-16 sm:pb-0">{children}</div>
+      <footer className="border-t border-neutral-200 px-4 py-4 text-center text-xs text-ink-secondary">
         <Link href="/privacy" className="underline">
           Privacy
         </Link>

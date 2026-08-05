@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import RouteMap from "@/components/RouteMapLoader";
+import { buttonClasses } from "@/lib/ui";
 
 interface Vehicle {
   id: string;
@@ -53,25 +54,25 @@ function AddVehicleForm({ onAdded }: { onAdded: (v: Vehicle) => void }) {
   return (
     <div className="mt-2 flex flex-col gap-2">
       <input
-        className="rounded-lg border px-3 py-2"
+        className="rounded-control border border-neutral-200 px-3 py-2 text-sm"
         placeholder="Make (e.g. Renault)"
         value={make}
         onChange={(e) => setMake(e.target.value)}
       />
       <input
-        className="rounded-lg border px-3 py-2"
+        className="rounded-control border border-neutral-200 px-3 py-2 text-sm"
         placeholder="Model (e.g. Clio)"
         value={model}
         onChange={(e) => setModel(e.target.value)}
       />
       <input
-        className="rounded-lg border px-3 py-2"
+        className="rounded-control border border-neutral-200 px-3 py-2 text-sm"
         placeholder="Color"
         value={color}
         onChange={(e) => setColor(e.target.value)}
       />
       <input
-        className="rounded-lg border px-3 py-2"
+        className="rounded-control border border-neutral-200 px-3 py-2 text-sm"
         placeholder="License plate"
         value={licensePlate}
         onChange={(e) => setLicensePlate(e.target.value)}
@@ -80,14 +81,14 @@ function AddVehicleForm({ onAdded }: { onAdded: (v: Vehicle) => void }) {
         type="number"
         min={1}
         max={8}
-        className="rounded-lg border px-3 py-2"
+        className="rounded-control border border-neutral-200 px-3 py-2 text-sm"
         placeholder="Total seats"
         value={seatsTotal}
         onChange={(e) => setSeatsTotal(Number(e.target.value))}
       />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-error-dark">{error}</p>}
       <button
-        className="rounded-lg bg-black py-2 text-white disabled:opacity-50"
+        className={buttonClasses("primary")}
         disabled={!make || !model || !color || !licensePlate || !seatsTotal || submitting}
         onClick={submit}
       >
@@ -130,7 +131,7 @@ function LocationPicker({
   return (
     <div className="relative">
       <input
-        className="w-full rounded-lg border px-3 py-2"
+        className="w-full rounded-control border border-neutral-200 px-3 py-2 text-sm"
         placeholder={placeholder}
         value={query}
         onChange={(e) => {
@@ -140,11 +141,11 @@ function LocationPicker({
         onFocus={() => setOpen(true)}
       />
       {value && value.label === query && (
-        <span className="absolute right-3 top-2.5 text-xs text-green-700">✓ location set</span>
+        <span className="absolute right-3 top-2.5 text-xs text-success-dark">✓ location set</span>
       )}
       {open && (loading || options.length > 0) && (
-        <div className="absolute z-10 mt-1 w-full rounded-lg border bg-white shadow-sm">
-          {loading && <p className="px-3 py-2 text-xs text-neutral-500">Searching…</p>}
+        <div className="absolute z-10 mt-1 w-full rounded-control border border-neutral-200 bg-white shadow-card">
+          {loading && <p className="px-3 py-2 text-xs text-ink-secondary">Searching…</p>}
           {!loading &&
             options.map((opt, i) => (
               <button
@@ -266,17 +267,17 @@ export default function OfferRidePage() {
   }
 
   if (!currentUser) {
-    return <p className="px-4 py-6 text-sm text-neutral-500">Loading…</p>;
+    return <p className="px-4 py-6 text-sm text-ink-secondary">Loading…</p>;
   }
 
   return (
     <main className="mx-auto max-w-md px-4 py-6">
-      <h1 className="mb-4 text-xl font-semibold">Offer a ride</h1>
+      <h1 className="mb-4 font-display text-lg font-bold text-ink">Offer a ride</h1>
 
-      <section className="mb-4 rounded-xl border p-4">
-        <p className="mb-2 font-medium">Vehicle</p>
+      <section className="mb-4 rounded-card bg-white p-4 shadow-card">
+        <p className="mb-2 text-sm font-semibold text-ink">Vehicle</p>
         {vehicles.length === 0 && !showAddVehicle && (
-          <button className="text-sm underline" onClick={() => setShowAddVehicle(true)}>
+          <button className="text-sm font-semibold text-primary" onClick={() => setShowAddVehicle(true)}>
             + Register a vehicle first
           </button>
         )}
@@ -291,7 +292,7 @@ export default function OfferRidePage() {
         )}
         {vehicles.length > 0 && (
           <select
-            className="w-full rounded-lg border px-3 py-2"
+            className="w-full rounded-control border border-neutral-200 px-3 py-2 text-sm"
             value={vehicleId}
             onChange={(e) => setVehicleId(e.target.value)}
           >
@@ -307,22 +308,26 @@ export default function OfferRidePage() {
 
       <section className="mb-4 flex gap-2">
         <button
-          className={`flex-1 rounded-lg border py-2 ${mode === "one-time" ? "bg-black text-white" : ""}`}
+          className={`flex-1 rounded-control border py-2 text-sm font-semibold ${
+            mode === "one-time" ? "border-primary bg-primary text-white" : "border-neutral-200 text-ink"
+          }`}
           onClick={() => setMode("one-time")}
         >
           One-time ride
         </button>
         <button
-          className={`flex-1 rounded-lg border py-2 ${mode === "recurring" ? "bg-black text-white" : ""}`}
+          className={`flex-1 rounded-control border py-2 text-sm font-semibold ${
+            mode === "recurring" ? "border-primary bg-primary text-white" : "border-neutral-200 text-ink"
+          }`}
           onClick={() => setMode("recurring")}
         >
           Recurring ride
         </button>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-xl border p-4">
+      <section className="flex flex-col gap-3 rounded-card bg-white p-4 shadow-card">
         <select
-          className="rounded-lg border px-3 py-2"
+          className="rounded-control border border-neutral-200 px-3 py-2 text-sm"
           value={originCityId}
           onChange={(e) => setOriginCityId(e.target.value)}
         >
@@ -335,7 +340,7 @@ export default function OfferRidePage() {
         </select>
         <LocationPicker placeholder="Pickup point (e.g. Hammamet louage station)" value={origin} onSelect={setOrigin} />
         <select
-          className="rounded-lg border px-3 py-2"
+          className="rounded-control border border-neutral-200 px-3 py-2 text-sm"
           value={destinationCityId}
           onChange={(e) => setDestinationCityId(e.target.value)}
         >
@@ -361,26 +366,26 @@ export default function OfferRidePage() {
           <div className="flex gap-2">
             <input
               type="date"
-              className="flex-1 rounded-lg border px-3 py-2"
+              className="flex-1 rounded-control border border-neutral-200 px-3 py-2 text-sm"
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
             <input
               type="time"
-              className="flex-1 rounded-lg border px-3 py-2"
+              className="flex-1 rounded-control border border-neutral-200 px-3 py-2 text-sm"
               value={time}
               onChange={(e) => setTime(e.target.value)}
             />
           </div>
         ) : (
           <div>
-            <p className="mb-1 text-sm text-neutral-600">Repeats on</p>
+            <p className="mb-1 text-sm text-ink-secondary">Repeats on</p>
             <div className="flex gap-1">
               {DAYS.map((d) => (
                 <button
                   key={d.value}
-                  className={`rounded-lg border px-2 py-1 text-xs ${
-                    days.includes(d.value) ? "bg-black text-white" : ""
+                  className={`rounded-control border px-2 py-1 text-xs font-medium ${
+                    days.includes(d.value) ? "border-primary bg-primary text-white" : "border-neutral-200 text-ink"
                   }`}
                   onClick={() => toggleDay(d.value)}
                 >
@@ -390,7 +395,7 @@ export default function OfferRidePage() {
             </div>
             <input
               type="time"
-              className="mt-2 w-full rounded-lg border px-3 py-2"
+              className="mt-2 w-full rounded-control border border-neutral-200 px-3 py-2 text-sm"
               value={time}
               onChange={(e) => setTime(e.target.value)}
             />
@@ -402,7 +407,7 @@ export default function OfferRidePage() {
             type="number"
             min={1}
             max={8}
-            className="flex-1 rounded-lg border px-3 py-2"
+            className="flex-1 rounded-control border border-neutral-200 px-3 py-2 text-sm"
             placeholder="Seats"
             value={seats}
             onChange={(e) => setSeats(Number(e.target.value))}
@@ -411,14 +416,14 @@ export default function OfferRidePage() {
             type="number"
             min={0}
             step="0.5"
-            className="flex-1 rounded-lg border px-3 py-2"
+            className="flex-1 rounded-control border border-neutral-200 px-3 py-2 text-sm"
             placeholder="Price per seat (TND)"
             value={pricePerSeat}
             onChange={(e) => setPricePerSeat(Number(e.target.value))}
           />
         </div>
 
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm text-ink">
           <input
             type="checkbox"
             checked={bookingMode === "INSTANT"}
@@ -428,14 +433,14 @@ export default function OfferRidePage() {
         </label>
 
         <button
-          className="rounded-lg bg-black py-3 text-white disabled:opacity-50"
+          className={buttonClasses("primary")}
           disabled={!vehicleId || !originCityId || !destinationCityId || !origin || !destination || submitting}
           onClick={submit}
         >
           {submitting ? "Publishing…" : "Publish ride"}
         </button>
 
-        {result && <p className="text-sm text-neutral-600">{result}</p>}
+        {result && <p className="text-sm text-ink-secondary">{result}</p>}
       </section>
     </main>
   );

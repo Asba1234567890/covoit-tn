@@ -18,9 +18,9 @@ interface Analytics {
 
 function Card({ label, value, flag }: { label: string; value: string; flag?: boolean }) {
   return (
-    <div className={`rounded-xl border p-4 ${flag ? "border-amber-300 bg-amber-50" : "bg-white"}`}>
-      <p className="text-xs text-neutral-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
+    <div className={`rounded-card p-4 shadow-card ${flag ? "bg-warning/10" : "bg-white"}`}>
+      <p className="text-xs text-ink-secondary">{label}</p>
+      <p className={`mt-1 font-display text-2xl font-extrabold ${flag ? "text-warning-dark" : "text-ink"}`}>{value}</p>
     </div>
   );
 }
@@ -32,11 +32,11 @@ export default function AdminOverviewPage() {
     fetch("/api/admin/analytics").then((r) => r.json()).then(setData);
   }, []);
 
-  if (!data) return <p className="text-sm text-neutral-500">Loading…</p>;
+  if (!data) return <p className="text-sm text-ink-secondary">Loading…</p>;
 
   return (
     <div>
-      <h1 className="mb-4 text-lg font-semibold">Overview</h1>
+      <h1 className="mb-4 font-display text-lg font-bold text-ink">Analytics</h1>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card label="Total users" value={data.users.toString()} />
         <Card label="Drivers" value={data.drivers.toString()} />
