@@ -6,6 +6,7 @@ import {
   PhoneAlreadyRegisteredError,
   InvalidCredentialsError,
   NoPasswordSetError,
+  InvalidPhoneFormatError,
 } from "@/server/auth/password";
 
 export async function POST(req: NextRequest) {
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (e) {
+    if (e instanceof InvalidPhoneFormatError) return NextResponse.json({ error: e.message }, { status: 400 });
     if (e instanceof WeakPasswordError) return NextResponse.json({ error: e.message }, { status: 400 });
     if (e instanceof PhoneAlreadyRegisteredError) return NextResponse.json({ error: e.message }, { status: 409 });
     if (e instanceof InvalidCredentialsError) return NextResponse.json({ error: e.message }, { status: 401 });
