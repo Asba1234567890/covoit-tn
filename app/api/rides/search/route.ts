@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
-import { OsmMapProvider } from "@/lib/map/OsmMapProvider";
+import { GoogleMapProvider } from "@/lib/map/GoogleMapProvider";
 import { scoreMatch } from "@/lib/matching/matchingEngine";
 import { getSessionUser } from "@/server/auth/session";
 import { getBlockedIds } from "@/server/users/blockService";
 
-const map = new OsmMapProvider();
+const map = new GoogleMapProvider();
 
 const SORTS = ["match", "price_asc", "price_desc", "rating_desc", "departure_asc"] as const;
 type SortBy = (typeof SORTS)[number];

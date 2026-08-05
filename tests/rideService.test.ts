@@ -9,10 +9,10 @@ vi.mock("@/server/db/prisma", () => ({
   },
 }));
 
-// Avoid any real network calls to Nominatim/OSRM — route() just needs to
-// return a fixed shape for these tests.
-vi.mock("@/lib/map/OsmMapProvider", () => ({
-  OsmMapProvider: class {
+// Avoid any real network calls to the Google Maps API — route() just needs
+// to return a fixed shape for these tests.
+vi.mock("@/lib/map/GoogleMapProvider", () => ({
+  GoogleMapProvider: class {
     route = vi.fn().mockResolvedValue({ distanceMeters: 1000, durationSeconds: 600, geometry: null });
   },
 }));
