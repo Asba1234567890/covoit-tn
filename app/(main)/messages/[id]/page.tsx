@@ -16,7 +16,7 @@ interface Message {
 }
 
 interface ConversationInfo {
-  ride: { originLabel: string; destinationLabel: string; departureAt: string };
+  ride: { originLabel: string; destinationLabel: string; departureAt: string; driverId: string };
   otherParticipants: { id: string; firstName: string; verificationLevel: number }[];
 }
 
@@ -106,7 +106,9 @@ export default function ConversationThreadPage() {
         </Link>
         {info && other && (
           <div className="mt-1 flex items-center gap-2">
-            <p className="font-semibold text-ink">{other.firstName}</p>
+            <Link href={other.id === info.ride.driverId ? `/drivers/${other.id}` : `/passengers/${other.id}`} className="font-semibold text-ink hover:underline">
+              {other.firstName}
+            </Link>
             <VerificationBadge verificationLevel={other.verificationLevel} />
           </div>
         )}

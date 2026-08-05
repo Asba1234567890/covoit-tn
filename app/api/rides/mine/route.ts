@@ -17,7 +17,10 @@ export async function GET(req: NextRequest) {
       vehicle: { select: { make: true, model: true, color: true } },
       bookings: {
         where: { status: { not: "CANCELLED_BY_PASSENGER" } },
-        include: { passenger: { select: { id: true, firstName: true, phone: true } } },
+        include: {
+          passenger: { select: { id: true, firstName: true, phone: true } },
+          reviews: { where: { authorId: user.id }, select: { id: true } },
+        },
         orderBy: { createdAt: "desc" },
       },
     },
@@ -25,5 +28,14 @@ export async function GET(req: NextRequest) {
     take: 100,
   });
 
-  return NextResponse.json({ rides });
+  return NextResponse.json({
+    rides: rides.map((ride: (typeof rides)[number]) => ({
+      ...ride,
+      bookings: ride.bookings.map((b: (typeof ride.bookings)[number]) => ({
+        ...b,
+        hasReviewed: b.reviews.length > 0,
+        reviews: undefined,
+      })),
+    })),
+  });
 }

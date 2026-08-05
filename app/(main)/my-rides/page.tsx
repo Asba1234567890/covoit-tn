@@ -4,14 +4,17 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import ReportForm from "@/components/ReportForm";
+import ReviewForm from "@/components/ReviewForm";
 import StatusBadge, { type StatusTone } from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import { buttonClasses } from "@/lib/ui";
+import { PASSENGER_REVIEW_CATEGORIES } from "@/lib/reviewCategories";
 
 interface Booking {
   id: string;
   seatsBooked: number;
   status: string;
+  hasReviewed: boolean;
   passenger: { id: string; firstName: string; phone: string };
 }
 
@@ -57,6 +60,7 @@ export default function MyRidesPage() {
   const currentUser = useRequireAuth();
   const [rides, setRides] = useState<Ride[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
 
   function load() {
     fetch("/api/rides/mine")
@@ -149,7 +153,10 @@ export default function MyRidesPage() {
                   <div key={b.id} className="flex items-center justify-between gap-2 text-sm">
                     <div>
                       <p className="text-ink">
-                        {b.passenger.firstName} · {b.seatsBooked} seat(s)
+                        <Link href={`/passengers/${b.passenger.id}`} className="font-medium hover:underline">
+                          {b.passenger.firstName}
+                        </Link>{" "}
+                        · {b.seatsBooked} seat(s)
                       </p>
                       <div className="mt-0.5">
                         <StatusBadge label={BOOKING_STATUS_LABEL[b.status] ?? b.status} tone={BOOKING_STATUS_TONE[b.status] ?? "neutral"} />
@@ -179,7 +186,24 @@ export default function MyRidesPage() {
                           Message
                         </Link>
                       )}
+                      {b.status === "COMPLETED" && !b.hasReviewed && reviewingId !== b.id && (
+                        <button className={buttonClasses("secondary", "px-2.5 py-1.5 text-xs")} onClick={() => setReviewingId(b.id)}>
+                          Leave a review
+                        </button>
+                      )}
+                      {b.status === "COMPLETED" && b.hasReviewed && <StatusBadge label="Reviewed" tone="success" />}
                     </div>
+                    {reviewingId === b.id && (
+                      <ReviewForm
+                        bookingId={b.id}
+                        subjectLabel="passenger"
+                        categories={PASSENGER_REVIEW_CATEGORIES}
+                        onDone={() => {
+                          setReviewingId(null);
+                          load();
+                        }}
+                      />
+                    )}
                     <div className="mt-1">
                       <ReportForm reportedUserId={b.passenger.id} rideId={ride.id} />
                     </div>

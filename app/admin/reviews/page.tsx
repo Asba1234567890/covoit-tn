@@ -9,8 +9,9 @@ interface AdminReviewRow {
   stars: number;
   comment: string | null;
   createdAt: string;
-  author: { firstName: string };
-  subject: { firstName: string };
+  author: { id: string; firstName: string };
+  subject: { id: string; firstName: string };
+  booking: { ride: { driverId: string } };
 }
 
 export default function AdminReviewsPage() {
@@ -31,8 +32,11 @@ export default function AdminReviewsPage() {
     <div>
       <h1 className="mb-4 font-display text-lg font-bold text-ink">Reviews to moderate</h1>
       <div className="flex flex-col gap-2">
-        {reviews.map((r) => (
+        {reviews.map((r) => {
+          const direction = r.author.id === r.booking.ride.driverId ? "Driver → Passenger" : "Passenger → Driver";
+          return (
           <div key={r.id} className="rounded-card bg-white p-4 shadow-card">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-secondary">{direction}</p>
             <p className="font-semibold text-ink">
               {r.author.firstName} → {r.subject.firstName} · <span className="text-accent-dark">{"★".repeat(r.stars)}</span>
             </p>
@@ -46,7 +50,8 @@ export default function AdminReviewsPage() {
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
         {reviews.length === 0 && <EmptyState message="Nothing pending review." />}
       </div>
     </div>

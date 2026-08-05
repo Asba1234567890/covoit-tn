@@ -9,6 +9,7 @@ export type NotificationType =
   | "RIDE_REMINDER"
   | "TRIP_COMPLETED"
   | "REVIEW_AVAILABLE"
+  | "REVIEW_RECEIVED"
   | "DRIVER_VERIFICATION_RESULT"
   | "NEW_MESSAGE";
 
@@ -28,6 +29,7 @@ const NOTIFICATION_CHANNELS: Record<NotificationType, NotificationChannel[]> = {
   RIDE_REMINDER: ["in_app"],
   TRIP_COMPLETED: ["in_app"],
   REVIEW_AVAILABLE: ["in_app"],
+  REVIEW_RECEIVED: ["in_app"],
   DRIVER_VERIFICATION_RESULT: ["in_app"],
   NEW_MESSAGE: ["in_app"],
 };

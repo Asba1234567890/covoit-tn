@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminFromRequest, canModerate } from "@/server/admin/adminAuth";
 import { logAdminAction } from "@/server/admin/auditLog";
 import { prisma } from "@/server/db/prisma";
+import { moderateReview } from "@/server/reviews/reviewService";
 
 export async function GET(req: NextRequest) {
   const admin = await getAdminFromRequest(req);
@@ -13,8 +14,9 @@ export async function GET(req: NextRequest) {
   const reviews = await prisma.review.findMany({
     where: { moderationStatus: status },
     include: {
-      author: { select: { firstName: true } },
-      subject: { select: { firstName: true } },
+      author: { select: { id: true, firstName: true } },
+      subject: { select: { id: true, firstName: true } },
+      booking: { select: { ride: { select: { driverId: true } } } },
     },
     orderBy: { createdAt: "desc" },
     take: 100,
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "reviewId and a valid decision are required" }, { status: 400 });
   }
 
-  const review = await prisma.review.update({ where: { id: reviewId }, data: { moderationStatus: decision } });
+  const review = await moderateReview({ reviewId, decision });
   await logAdminAction({ adminUserId: admin.adminId, action: "review:moderate", metadata: { reviewId, decision } });
 
   return NextResponse.json({ review });

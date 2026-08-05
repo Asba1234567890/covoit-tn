@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import ReportForm from "@/components/ReportForm";
+import ReviewForm from "@/components/ReviewForm";
 import StatusBadge, { type StatusTone } from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import { buttonClasses } from "@/lib/ui";
+import { DRIVER_REVIEW_CATEGORIES } from "@/lib/reviewCategories";
 
 interface Booking {
   id: string;
@@ -44,55 +46,6 @@ const STATUS_TONE: Record<string, StatusTone> = {
   CANCELLED_BY_DRIVER: "neutral",
   CANCELLED_BY_PASSENGER: "neutral",
 };
-
-function ReviewForm({ bookingId, onDone }: { bookingId: string; onDone: () => void }) {
-  const [stars, setStars] = useState(5);
-  const [comment, setComment] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit() {
-    setSubmitting(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/reviews", {
-        method: "POST",
-        body: JSON.stringify({ bookingId, stars, comment }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not submit review");
-      onDone();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="mt-2 rounded-control bg-neutral-50 p-3">
-      <p className="mb-1 text-xs font-medium text-ink">Rate your driver</p>
-      <div className="flex gap-1 text-lg">
-        {[1, 2, 3, 4, 5].map((s) => (
-          <button key={s} type="button" onClick={() => setStars(s)} className={s <= stars ? "text-accent" : "text-neutral-300"}>
-            ★
-          </button>
-        ))}
-      </div>
-      <textarea
-        className="mt-2 w-full rounded-control border border-neutral-200 px-2 py-1 text-sm"
-        rows={2}
-        placeholder="Comment (optional)"
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-      />
-      {error && <p className="text-xs text-error-dark">{error}</p>}
-      <button className={buttonClasses("primary", "mt-2 px-3 py-1.5 text-xs")} disabled={submitting} onClick={submit}>
-        {submitting ? "Submitting…" : "Submit review"}
-      </button>
-    </div>
-  );
-}
 
 export default function MyBookingsPage() {
   const currentUser = useRequireAuth();
@@ -144,7 +97,10 @@ export default function MyBookingsPage() {
               <StatusBadge label={STATUS_LABEL[b.status] ?? b.status} tone={STATUS_TONE[b.status] ?? "neutral"} />
             </div>
             <p className="mt-1 text-sm text-ink-secondary">
-              {new Date(b.ride.departureAt).toLocaleString()} · with {b.ride.driver.firstName}
+              {new Date(b.ride.departureAt).toLocaleString()} · with{" "}
+              <Link href={`/drivers/${b.ride.driver.id}`} className="font-medium text-ink hover:underline">
+                {b.ride.driver.firstName}
+              </Link>
             </p>
             <p className="text-sm text-ink-secondary">
               {b.seatsBooked} seat(s) · {b.ride.pricePerSeat} TND/seat
@@ -170,6 +126,8 @@ export default function MyBookingsPage() {
             {reviewingId === b.id && (
               <ReviewForm
                 bookingId={b.id}
+                subjectLabel="driver"
+                categories={DRIVER_REVIEW_CATEGORIES}
                 onDone={() => {
                   setReviewingId(null);
                   load();

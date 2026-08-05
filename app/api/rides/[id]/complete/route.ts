@@ -47,8 +47,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   for (const b of completedBookings) {
     await notify(b.passengerId, "TRIP_COMPLETED", { rideId: params.id, bookingId: b.id });
-    await notify(b.passengerId, "REVIEW_AVAILABLE", { rideId: params.id, bookingId: b.id, subjectId: ride.driverId });
-    await notify(ride.driverId, "REVIEW_AVAILABLE", { rideId: params.id, bookingId: b.id, subjectId: b.passengerId });
+    // role distinguishes which side of the review this is for — the
+    // passenger reviews the driver via /my-bookings, but the driver reviews
+    // the passenger via /my-rides, a different page with a different list.
+    await notify(b.passengerId, "REVIEW_AVAILABLE", { rideId: params.id, bookingId: b.id, subjectId: ride.driverId, role: "passenger" });
+    await notify(ride.driverId, "REVIEW_AVAILABLE", { rideId: params.id, bookingId: b.id, subjectId: b.passengerId, role: "driver" });
   }
   if (completedBookings.length > 0) {
     await notify(ride.driverId, "TRIP_COMPLETED", { rideId: params.id });

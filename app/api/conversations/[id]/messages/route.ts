@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     prisma.conversation.findUnique({
       where: { id: params.id },
       include: {
-        ride: { select: { originLabel: true, destinationLabel: true, departureAt: true } },
+        ride: { select: { originLabel: true, destinationLabel: true, departureAt: true, driverId: true } },
         participants: { include: { user: { select: { id: true, firstName: true, verificationLevel: true } } } },
       },
     }),

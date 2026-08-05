@@ -42,7 +42,19 @@ function describe(n: Notification): { title: string; subtitle: string; href: str
     case "TRIP_COMPLETED":
       return { title: "Trip completed", subtitle: `A trip was marked completed — ${when}`, href: "/my-bookings", tone: "success" };
     case "REVIEW_AVAILABLE":
-      return { title: "Review available", subtitle: `You can now leave a review — ${when}`, href: "/my-bookings", tone: "success" };
+      return {
+        title: "Review available",
+        subtitle: `You can now leave a review — ${when}`,
+        href: p.role === "driver" ? "/my-rides" : "/my-bookings",
+        tone: "success",
+      };
+    case "REVIEW_RECEIVED":
+      return {
+        title: "You received a new review ⭐",
+        subtitle: p.authorName && p.stars ? `${p.authorName} rated your ride ${p.stars} stars — ${when}` : `Someone left you a review — ${when}`,
+        href: "/profile",
+        tone: "success",
+      };
     case "DRIVER_VERIFICATION_RESULT":
       return { title: "Verification update", subtitle: `Your verification status was updated — ${when}`, href: "/profile", tone: "primary" };
     case "NEW_MESSAGE":
